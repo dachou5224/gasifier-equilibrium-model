@@ -27,7 +27,7 @@ VALIDATION_CASES = {
                 "Ratio_SC": 0.08,
                 "pt": 99.6,
                 "P": 4.08,
-                "TIN": 500.0,
+                "TIN": 300.0,
                 # [关键调整] 
                 # 理想平衡模型通常偏高，根据经验及反算，
                 # 将热损从 1.0% 调整到约 2.85% 可匹配 1370C (具体值可用 Auto-Calibrate 算出)
@@ -61,7 +61,7 @@ VALIDATION_CASES = {
                 "Ratio_SC": 0.08,       # kg Steam / kg Coal 
                 "pt": 99.6,             # 假设纯度
                 "P": 4.08,              # MPa 
-                "TIN": 500.0,           # 假设入口温度
+                "TIN": 300.0,           # 假设入口温度
                 "HeatLossPercent": 1.0, # 论文提及热损失约 1-3% [cite: 168]
                 "GasifierType": "Dry Powder" # 论文主要讨论干煤粉
             }
