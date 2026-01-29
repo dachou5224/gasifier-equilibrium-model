@@ -1,3 +1,19 @@
+"""
+gasifier_ui.py - Streamlit Web UI for Gasifier Model (Chem Portal Integration)
+
+================================================================================
+MODIFICATION HISTORY
+================================================================================
+2026-01-28  v2.0  刘臻 (Liu Zhen)
+    - [Refactor] 从 app.py 重命名为 gasifier_ui.py，用于 Chem Portal 集成
+    - [Layout] Line 47-49: 从 Sidebar 布局改为双列布局 (col_input, col_result)
+    - [API] Line 35-38: 封装 run() 函数以支持外部模块调用
+    - [Feature] Line 126-150: 智能校正功能 (热损/氧煤比自动调整)
+    - [Feature] Line 210-215: 诊断信息展示 (能量/元素平衡)
+    - [UI] Line 171-204: 优化结果展示 (KPI卡片 + 饼图)
+================================================================================
+"""
+
 import streamlit as st
 import pandas as pd
 import numpy as np
