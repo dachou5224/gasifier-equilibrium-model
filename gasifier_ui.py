@@ -41,7 +41,7 @@ def init_session_state():
         # Process
         "FeedRate": 1000.0,
         "SlurryConc": 60.0,
-        "Ratio_OC": 0.8,
+        "Ratio_OC": 1.0, # Updated default
         "Ratio_SC": 0.08,
         "pt": 99.6,
         "P": 4.0,

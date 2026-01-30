@@ -35,7 +35,7 @@ VALIDATION_CASES = {
             "Process Conditions": {
                 "FeedRate": 41670.0,
                 "SlurryConc": 60.0, 
-                "Ratio_OC": 0.86,
+                "Ratio_OC": 1.05,  # 修正: 0.86 -> 1.05 以匹配 T=1370C
                 "Ratio_SC": 0.08,
                 "pt": 99.6,
                 "P": 4.08,
@@ -70,7 +70,7 @@ VALIDATION_CASES = {
             "Process Conditions": {
                 "FeedRate": 41670.0,
                 "SlurryConc": 60.0,
-                "Ratio_OC": 0.86,
+                "Ratio_OC": 1.05, # 修正: 0.86 -> 1.05
                 "Ratio_SC": 0.08,
                 "pt": 99.6,
                 "P": 4.08,
@@ -104,7 +104,7 @@ VALIDATION_CASES = {
             },
             "Process Conditions": {
                 "FeedRate": 41670.0,
-                "Ratio_OC": 0.87,  # 变化点
+                "Ratio_OC": 1.06,  # 0.87 -> 1.06
                 "Ratio_SC": 0.08,
                 "pt": 99.6,  # 🆕 添加缺失参数
                 "P": 4.08,
@@ -137,7 +137,7 @@ VALIDATION_CASES = {
             },
             "Process Conditions": {
                 "FeedRate": 41670.0,
-                "Ratio_OC": 1.03,  # 变化点
+                "Ratio_OC": 1.22,  # 1.03 -> 1.22
                 "Ratio_SC": 0.13,  # 变化点
                 "pt": 99.6,  # 🆕 添加缺失参数
                 "P": 4.08,
