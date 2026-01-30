@@ -150,7 +150,6 @@ def run():
             
             st.session_state.P = c3.number_input("压力 (MPa)", value=st.session_state.P)
             st.session_state.TIN = c4.number_input("入口 T (K)", value=st.session_state.TIN)
-            st.session_state.TIN = c4.number_input("入口 T (K)", value=st.session_state.TIN)
             st.session_state.pt = st.number_input("氧纯度 (%)", value=st.session_state.pt)
         
         # 4. 求解策略 (Solver)
