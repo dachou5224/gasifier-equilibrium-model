@@ -18,8 +18,17 @@ import streamlit as st
 import pandas as pd
 import numpy as np
 import plotly.graph_objects as go
-from gasifier import GasifierModel
-from coal_props import COAL_DATABASE
+import sys
+import os
+
+# Add src to path so we can import gasifier package
+current_dir = os.path.dirname(os.path.abspath(__file__))
+src_path = os.path.join(current_dir, 'src')
+if src_path not in sys.path:
+    sys.path.insert(0, src_path)
+
+from gasifier.gasifier import GasifierModel
+from gasifier.coal_props import COAL_DATABASE
 from validation_cases import VALIDATION_CASES
 
 # --- 1. 初始化 Session State (保持不变) ---
@@ -151,16 +160,17 @@ def run():
                     target_K = st.session_state.Target_T + 273.15
                     with st.spinner("Calibrating..."):
                         loss, _ = model.calculate_heat_loss_for_target_T(target_K)
-                        if loss < 0.1:
-                            st.warning(f"热损过低 ({loss:.2f}%)，自动调整氧煤比")
-                            fixed_loss = 1.0
-                            new_ratio = model.calculate_oxygen_ratio_for_target_T(target_K, fixed_loss_percent=fixed_loss)
-                            st.session_state.HeatLossPercent = fixed_loss
-                            st.session_state.Ratio_OC = new_ratio
-                            st.success(f"新氧煤比: {new_ratio:.4f}")
-                        else:
-                            st.session_state.HeatLossPercent = loss
-                            st.success(f"新热损: {loss:.4f}%")
+                        if loss < 0:
+                            st.warning(f"⚠️ 自热条件无法达到目标温度 (需供热)。强制热损=0%")
+                            st.info(f"💡 建议: 提高氧煤比 (当前={st.session_state.Ratio_OC}) 以增加反应热。")
+                            loss = 0.0
+                            
+                        # Check low heat loss
+                        if loss < 0.1 and loss >= 0:
+                             st.warning(f"热损过低 ({loss:.2f}%)，可能需要调整")
+
+                        st.session_state.HeatLossPercent = loss
+                        st.success(f"校正完成! 新热损: {loss:.4f}%")
                     st.rerun()
                 except Exception as e:
                     st.error(f"校正失败: {e}")

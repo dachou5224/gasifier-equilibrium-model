@@ -17,3 +17,5 @@ env/
 
 # Streamlit
 .streamlit/
+# Validation artifacts
+validation_results.json

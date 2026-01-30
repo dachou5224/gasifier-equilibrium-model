@@ -18,63 +18,46 @@ The core algorithm uses **Gibbs Free Energy Minimization** (RGibbs) with mechani
 | Feature | 功能 | Description | 描述 |
 |---------|------|-------------|------|
 | **Web UI** | Web界面 | Streamlit dashboard with charts | Streamlit交互式仪表盘（已集成至Chem Portal） |
-| **Desktop UI** | 桌面界面 | Tkinter lightweight interface | Tkinter轻量化界面 |
+| **Heat Loss Tuning** | 热损自校准 | Auto-tune Heat Loss to match Target T | 自动反算热损以匹配目标温度 |
+| **Diagnostic** | 智能诊断 | Check physical validity | 负热损警告、氧煤比建议 |
 | **RGibbs Solver** | RGibbs求解器 | scipy.optimize with SLSQP | scipy.optimize配合SLSQP方法 |
 | **Thermodynamics** | 热力学 | NIST Shomate equations | NIST Shomate方程（高/低温切换） |
-| **Quench Model** | 激冷模型 | Antoine saturation calculation | Antoine方程饱和度计算 |
 | **Coal Utilities** | 煤质工具 | NICE1 & SIMTECH algorithms | NICE1热值估算、SIMTECH生成焓计算 |
-| **Smart Calibration** | 智能校正 | Auto-tune Heat Loss or O/C | 自动反算热损或氧煤比 |
-| **Diagnostics** | 诊断系统 | Convergence & balance checks | 收敛警告、质量平衡检查（新增） |
 
 ---
 
 ## 2. File Structure | 文件结构
 
-| File 文件 | Description 描述 |
-|-----------|------------------|
-| `gasifier_ui.py` | **[推荐]** Streamlit Web应用（集成至Chem Portal） |
-| `gasifier.py` | 物理引擎（Gibbs求解器、能量平衡、激冷逻辑、**诊断系统**） |
-| `coal_props.py` | 煤质计算与数据库（**含单位自动转换**） |
-| `thermo_data.py` | 热力学数据库（NIST Shomate系数） |
-| `validation_cases.py` | 文献验证数据集 |
-| `main_gui.py` | Tkinter桌面GUI |
+```text
+gasifier-model/
+├── src/
+│   └── gasifier/          # Core model logic (Package)
+│       ├── gasifier.py    # Physics engine & Diagnostics
+│       ├── coal_props.py  # Coal properties & Unit conversion
+│       └── thermo_data.py # Thermodynamic database
+├── tests/                 # Validation tests
+│   ├── test_validation.py # Validation script
+│   └── validation_cases.py# Literature cases
+├── debug_tools/           # Debugging scripts
+├── gasifier_ui.py         # Streamlit Web App Entry
+└── validation_results.json# Test results
+```
 
 ---
 
 ## 3. Recent Modifications | 最近修改 (2026-01)
 
-### 3.1 UI Refactoring | UI重构: `app.py` → `gasifier_ui.py`
+### 3.1 Physics & Units | 物理引擎与单位修复
+> **Fix**: Standardized all internal energy units to **Joules (J)** and **Moles (mol)**. Fixed a 1000x scaling error in gas enthalpy.
+> **Fix**: Corrected coal formation enthalpy mixing units (kJ vs J).
 
-> **Summary 摘要**: Streamlit UI已重构，集成至 **Chem Portal** 框架。
+### 3.2 Auto-Calibration | 自动校准
+> **Feature**: Added `calibrate_heat_loss` method.
+> **Feature**: Added safety checks for negative heat loss (forcing to 0% and suggesting O/C ratio adjustment).
 
-| Change 修改 | 说明 |
-|-------------|------|
-| Rename | 从 `app.py` 重命名为 `gasifier_ui.py` |
-| Layout | 从 Sidebar 改为**双列布局** |
-| API | 封装 `run()` 函数支持外部调用 |
-
-### 3.2 Physics Engine | 物理引擎增强: `gasifier.py`
-
-> **Summary 摘要**: 新增多起点优化、物理边界约束、诊断系统。
-
-| Fix/Feature | 修改内容 |
-|-------------|----------|
-| Fix 1 | 消除全局变量 `T_calc_global`，温度作为参数传递 |
-| Fix 5 | 根据O/C比动态调整温度搜索区间 |
-| Fix 6 | 多起点优化策略（reducing/balanced/oxidizing） |
-| Fix 7 | 物理结果校验 `_validate_physical_results` |
-| New | 诊断系统 `diagnostics` 追踪收敛警告/质量平衡/约束违反 |
-| New | H2物理下限约束，防止H2归零 |
-
-### 3.3 Unit Handling | 单位处理: `coal_props.py`
-
-> **Summary 摘要**: 修复HHV单位不一致问题，自动检测与转换。
-
-| Change 修改 | 说明 |
-|-------------|------|
-| Auto-detect | 输入值 <1000 识别为 MJ/kg，自动转换为 kJ/kg |
-| Database | 数据库统一使用 kJ/kg |
-| Unit test | 新增 `test_hhv_units()` 验证函数 |
+### 3.3 Project Structure | 项目重构
+> **Refactor**: Moved core logic to `src/gasifier` for better packaging.
+> **Integration**: Updated `gasifier_ui.py` to auto-detect source paths for seamless Docker integration in Chem Portal.
 
 ---
 
@@ -90,29 +73,33 @@ The core algorithm uses **Gibbs Free Energy Minimization** (RGibbs) with mechani
 ### Method 1: Web App | 方法1：Web应用（推荐）
 ```bash
 streamlit run gasifier_ui.py
+# 提示: gasifier_ui.py 会自动添加 src/ 目录到路径，无需额外配置 PYTHONPATH
 ```
 
-### Method 2: Desktop GUI | 方法2：桌面应用
+### Method 2: Validation | 方法2：运行验证
 ```bash
-python main_gui.py
+python tests/test_validation.py
 ```
 
 ### Method 3: Module Import | 方法3：模块导入
 ```python
-from gasifier_ui import run        # UI函数
-from gasifier import GasifierModel # 核心模型
+import sys
+import os
+sys.path.append("/path/to/gasifier-model/src")
+
+from gasifier.gasifier import GasifierModel
+# ...
 ```
 
 ---
 
 ## 5. Validation | 验证案例
 
-| Case 案例 | Description 描述 | Target T (°C) |
-|-----------|------------------|---------------|
-| Paper_Case_6 (Calibrated) | 基准工况（校正热损） | 1370 |
-| Paper_Case_6 (Base) | 基准工况（标准条件） | 1370 |
-| Paper_Case_1 | 变化工况1（不同O/C） | 1333 |
-| Paper_Case_2 | 变化工况2（高O/C和S/C） | 1452 |
+| Case 案例 | Description 描述 | Target T (°C) | Error (°C) |
+|-----------|------------------|---------------|------------|
+| Paper_Case_6 | Base Case | 1370 | ~0.9 |
+| Paper_Case_1 | Variation 1 | 1333 | ~1.8 |
+| Paper_Case_2 | Variation 2 | 1452 | ~1.6 |
 
 ---
 
@@ -124,4 +111,4 @@ This project is for research and educational purposes.
 
 ---
 
-*Last Updated 最后更新: 2026-01-29*
+*Last Updated 最后更新: 2026-01-30*

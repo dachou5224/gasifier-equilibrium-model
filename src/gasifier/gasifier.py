@@ -18,8 +18,8 @@ MODIFICATION HISTORY
 
 import numpy as np
 from scipy.optimize import minimize, brentq
-from thermo_data import get_gibbs_free_energy, get_enthalpy_molar, R_CONST
-from coal_props import calculate_coal_thermo 
+from .thermo_data import get_gibbs_free_energy, get_enthalpy_molar, R_CONST
+from .coal_props import calculate_coal_thermo 
 
 class GasifierModel:
     def __init__(self, inputs):
@@ -73,26 +73,27 @@ class GasifierModel:
         m_moisture_coal = self.Gc_dry * (inp['Mt'] / (100 - inp['Mt']))
         
         m_coal = self.Gc_dry
-        n_C = m_coal * (inp['Cd']/100.0) / 12.011
-        n_H = m_coal * (inp['Hd']/100.0) / 1.008
-        n_O = m_coal * (inp['Od']/100.0) / 16.00
-        n_N = m_coal * (inp['Nd']/100.0) / 14.007
-        n_S = m_coal * (inp['Sd']/100.0) / 32.06
+        # Fix: Convert kg/h / (g/mol) -> kmol/h -> *1000 -> mol/h
+        n_C = m_coal * (inp['Cd']/100.0) / 12.011 * 1000.0
+        n_H = m_coal * (inp['Hd']/100.0) / 1.008 * 1000.0
+        n_O = m_coal * (inp['Od']/100.0) / 16.00 * 1000.0
+        n_N = m_coal * (inp['Nd']/100.0) / 14.007 * 1000.0
+        n_S = m_coal * (inp['Sd']/100.0) / 32.06 * 1000.0
         
         pt_frac = inp['pt'] / 100.0
         if pt_frac >= 1.0:
-            n_O2_pure = m_oxygen_total / 32.0
+            n_O2_pure = (m_oxygen_total / 32.0) * 1000.0
             n_N2_ox = 0
         else:
             denom = 32.0 + 28.01 * (1.0/pt_frac - 1.0)
-            n_O2_pure = m_oxygen_total / denom
+            n_O2_pure = (m_oxygen_total / denom) * 1000.0
             n_N2_ox = n_O2_pure * (1.0/pt_frac - 1.0)
             
         n_O += n_O2_pure * 2
         n_N += n_N2_ox * 2
         
         m_water_total = m_steam_added + water_from_slurry + m_moisture_coal
-        n_water_total_mol = m_water_total / 18.015
+        n_water_total_mol = (m_water_total / 18.015) * 1000.0
         n_H += n_water_total_mol * 2
         n_O += n_water_total_mol
 
@@ -385,41 +386,90 @@ class GasifierModel:
         moles = self.solve_equilibrium_at_T(T_out)
         if moles is None: return 1e9
         
+        # 1. 输出气体显热 + 化学能 (相对于元素的生成焓)
+        # get_enthalpy_molar 返回 J/mol (基于 NIST Shomate, H - H298 + Hf298)
         H_gas_out = 0.0
         for i, species in enumerate(self.species_list):
             H_gas_out += moles[i] * get_enthalpy_molar(species, T_out)
-        H_out_total = H_gas_out + self.abs_heat_loss
         
+        H_out_total = H_gas_out + self.abs_heat_loss # J/h
+        
+        # 2. 输入煤焓 (生成焓 + 显热)
+        # H_coal_form is J/kg (from coal_props)
+        # Cp_coal ~ 1.2 kJ/kgK = 1200 J/kgK
         T_coal_in = self.inputs.get('T_Coal_In', 298.15) 
-        Cp_coal = 1.2
-        H_coal_total = self.Gc_dry * self.H_coal_form + self.Gc_dry * Cp_coal * (T_coal_in - 298.15)
+        Cp_coal = 1200.0 # J/kg K (was 1.2)
+        H_coal_sensible = self.Gc_dry * Cp_coal * (T_coal_in - 298.15) # J/h
+        H_coal_chem = self.Gc_dry * self.H_coal_form # J/h
+        H_coal_total = H_coal_chem + H_coal_sensible
         
+        # 3. 输入气体 (气化剂)
         T_gas_in = self.inputs['TIN']
+        # get_enthalpy_molar is J/mol
         H_gas_in = (
-            (self.m_steam_gas/18.015) * get_enthalpy_molar('H2O', T_gas_in) + 
+            (self.m_steam_gas/18.015 * 1000.0) * get_enthalpy_molar('H2O', T_gas_in) + 
             self.flow_in['O2_mol'] * get_enthalpy_molar('O2', T_gas_in) +
             self.flow_in['N2_ox_mol'] * get_enthalpy_molar('N2', T_gas_in)
         )
         
+        # 4. 输入水浆/湿分
         T_water_in = self.inputs.get('T_Slurry_In', 298.15)
-        H_liq_in = (self.m_water_liq/18.015) * (-285830.0 + 75.3 * (T_water_in - 298.15))
+        # -285830 J/mol, 75.3 J/molK
+        H_liq_in = (self.m_water_liq/18.015 * 1000.0) * (-285830.0 + 75.3 * (T_water_in - 298.15))
         
         H_in_total = H_coal_total + H_gas_in + H_liq_in
+        
         return H_in_total - H_out_total
         
     def calculate_heat_loss_for_target_T(self, target_T_K):
         self._preprocess_inputs()
+        
+        # 计算在目标温度下的平衡组成和出口焓
         moles = self.solve_equilibrium_at_T(target_T_K)
+        if moles is None:
+            return None, None
+            
         H_gas_out = sum(moles[i] * get_enthalpy_molar(s, target_T_K) for i, s in enumerate(self.species_list))
         
-        real_loss = self.abs_heat_loss
-        self.abs_heat_loss = 0
-        balance_val = self._calculate_enthalpy_balance(target_T_K) 
-        self.abs_heat_loss = real_loss
+        # 计算输入总焓 (不含热损)
+        # 此处代码复用 _calculate_enthalpy_balance 的逻辑，但我们需要 H_in_total
+        # 简单的做法: 把 heat_loss 设为 0，调用 _calculate_enthalpy_balance 得到 (H_in - H_gas_out)
         
-        required_loss_J = balance_val
-        total_input = self.Gc_dry * self.HHV_coal
-        return (required_loss_J / total_input) * 100.0, required_loss_J
+        original_loss = self.abs_heat_loss
+        self.abs_heat_loss = 0.0
+        net_energy = self._calculate_enthalpy_balance(target_T_K) # H_in - H_gas
+        self.abs_heat_loss = original_loss
+        
+        # required_loss = H_in - H_gas = net_energy
+        required_loss_J = net_energy
+        
+        total_input_energy = self.Gc_dry * self.HHV_coal # J/h
+        loss_percent = (required_loss_J / total_input_energy) * 100.0
+        
+        return loss_percent, required_loss_J
+
+    def calibrate_heat_loss(self, target_T_K):
+        """
+        [New Feature] Adjust heat loss to match target temperature.
+        Updates self.inputs['HeatLossPercent'] and self.abs_heat_loss.
+        """
+        loss_pct, loss_J = self.calculate_heat_loss_for_target_T(target_T_K)
+        
+        if loss_pct is not None:
+            # Check for negative heat loss (Physical Unreasonable)
+            if loss_pct < 0 or loss_J < 0:
+                print(f"⚠️  警告: 为了达到目标温度 {target_T_K:.1f}K，需要外部供热 (热损为负: {loss_pct:.2f}%)")
+                print(f"   -> 物理上不可能 (自热气化炉)。强制将热损设置为 0.0% (绝热)")
+                print(f"   💡 建议: 当前氧煤比 (Ratio_OC={self.inputs.get('Ratio_OC', '?')}) 过低。请提高氧煤比以增加放热，从而达到目标温度。")
+                loss_pct = 0.0
+                loss_J = 0.0
+            
+            print(f"🌡️  Calibration: Target T={target_T_K:.1f}K -> Required Heat Loss = {loss_pct:.2f}%")
+            self.inputs['HeatLossPercent'] = loss_pct
+            # Re-calculate abs_heat_loss based on new percent
+            self.abs_heat_loss = (self.Gc_dry * self.HHV_coal) * (loss_pct / 100.0)
+            return True
+        return False
 
     def calculate_oxygen_ratio_for_target_T(self, target_T_K, fixed_loss_percent=1.0):
         target_loss_pct = fixed_loss_percent
