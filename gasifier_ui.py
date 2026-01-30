@@ -29,7 +29,7 @@ if src_path not in sys.path:
 
 from gasifier.gasifier import GasifierModel
 from gasifier.coal_props import COAL_DATABASE
-from validation_cases import VALIDATION_CASES
+from gasifier.validation_cases import VALIDATION_CASES
 
 # --- 1. 初始化 Session State (保持不变) ---
 def init_session_state():

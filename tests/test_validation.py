@@ -20,7 +20,7 @@ if src_path not in sys.path:
     sys.path.insert(0, src_path)
 
 from gasifier.gasifier import GasifierModel
-from validation_cases import VALIDATION_CASES
+from gasifier.validation_cases import VALIDATION_CASES
 
 class ValidationTester:
     def __init__(self):
