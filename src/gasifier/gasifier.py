@@ -20,6 +20,7 @@ import numpy as np
 from scipy.optimize import minimize, brentq
 from .thermo_data import get_gibbs_free_energy, get_enthalpy_molar, R_CONST
 from .coal_props import calculate_coal_thermo 
+from .stoic_solver import StoichiometricSolver
 
 class GasifierModel:
     def __init__(self, inputs):
@@ -270,7 +271,42 @@ class GasifierModel:
         
         return True, "OK"
 
+        return best_moles
+
+    def solve_stoic_equilibrium_at_T(self, T):
+        """
+        Use Stoichiometric Solver with Temperature Approach
+        """
+        solver = StoichiometricSolver(self.species_list, self.atom_matrix)
+        
+        # Get Delta T params (default 0)
+        dt_wgs = self.inputs.get('DeltaT_WGS', 0.0)
+        dt_meth = self.inputs.get('DeltaT_Meth', 0.0)
+        
+        moles = solver.solve(T, self.P_ratio, self.atom_input, dt_wgs, dt_meth)
+        
+        if moles is None:
+             self.diagnostics['convergence_warnings'].append(f"T={T:.1f}K: Stoic Solver failed")
+             return None
+             
+        # Check mass balance just in case
+        mass_errors = self._check_mass_balance(moles, T)
+        if mass_errors:
+             print(f"⚠️  Stoic Solver Mass Balance Error: {mass_errors}")
+             
+        return moles
+
     def solve_equilibrium_at_T(self, T):
+        """
+        Dispatch to appropriate solver based on 'SolverMethod' input.
+        Default: 'RGibbs'
+        """
+        method = self.inputs.get('SolverMethod', 'RGibbs')
+        
+        if method == 'Stoic':
+            return self.solve_stoic_equilibrium_at_T(T)
+        
+        # --- Original RGibbs Logic Below ---
         # Fix 1: 消除全局变量，T作为参数传递
         G0_vals = np.array([get_gibbs_free_energy(s, T) for s in self.species_list])
         

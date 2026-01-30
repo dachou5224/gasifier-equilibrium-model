@@ -50,7 +50,10 @@ def init_session_state():
         "TR": 1500.0,
         "T_Scrubber": 210.0,
         "GasifierType": "Dry Powder",
-        "Target_T": 1370.0 # 校正目标温度
+        "Target_T": 1370.0, # 校正目标温度
+        "SolverMethod": "RGibbs", # RGibbs or Stoic
+        "DeltaT_WGS": 0.0,
+        "DeltaT_Meth": 0.0
     }
     for key, val in defaults.items():
         if key not in st.session_state:
@@ -146,9 +149,23 @@ def run():
             
             st.session_state.P = c3.number_input("压力 (MPa)", value=st.session_state.P)
             st.session_state.TIN = c4.number_input("入口 T (K)", value=st.session_state.TIN)
+            st.session_state.TIN = c4.number_input("入口 T (K)", value=st.session_state.TIN)
             st.session_state.pt = st.number_input("氧纯度 (%)", value=st.session_state.pt)
         
-        # 4. 智能校正
+        # 4. 求解策略 (Solver)
+        with st.expander("🧮 求解策略 (Solver Settings)", expanded=False):
+            st.session_state.SolverMethod = st.selectbox("求解方法", ["RGibbs", "Stoic"], 
+                index=0 if st.session_state.SolverMethod=="RGibbs" else 1,
+                help="RGibbs: 全局最小化 (通用)\nStoic: 反应平衡常数法 (稳健, 支持温差)")
+            
+            if st.session_state.SolverMethod == "Stoic":
+                st.info("Temperature Approach Parameters (K)")
+                sc1, sc2 = st.columns(2)
+                st.session_state.DeltaT_WGS = sc1.number_input("ΔT (WGS)", value=st.session_state.DeltaT_WGS)
+                st.session_state.DeltaT_Meth = sc2.number_input("ΔT (Meth)", value=st.session_state.DeltaT_Meth)
+                st.caption("正值表示反应在更高温度下平衡 (抑制放热?)，负值表示在更低温度下平衡。")
+
+        # 5. 智能校正
         with st.expander("🛠️ 智能校正"):
             st.session_state.HeatLossPercent = st.number_input("热损 (%)", value=st.session_state.HeatLossPercent, format="%.4f")
             st.session_state.Target_T = st.number_input("目标出口 T (°C)", value=st.session_state.Target_T)
