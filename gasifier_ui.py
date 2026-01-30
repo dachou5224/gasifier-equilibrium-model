@@ -69,6 +69,7 @@ def run():
     # 标题区域
     st.title("🏭 气流床气化炉平衡模型")
     st.markdown("Thermodynamic equilibrium simulation based on Gibbs Free Energy Minimization.")
+    st.markdown("[📖 查看项目文档 (README) & 算法说明](https://github.com/dachou5224/gasifier-equilibrium-model/blob/main/README.md)")
     
     st.divider()
 
