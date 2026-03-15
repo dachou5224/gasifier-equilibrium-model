@@ -53,7 +53,8 @@ def init_session_state():
         "Target_T": 1370.0, # 校正目标温度
         "SolverMethod": "RGibbs", # RGibbs or Stoic
         "DeltaT_WGS": 0.0,
-        "DeltaT_Meth": 0.0
+        "DeltaT_Meth": 0.0,
+        "advanced_mode": False
     }
     for key, val in defaults.items():
         if key not in st.session_state:
@@ -73,6 +74,20 @@ def run():
     
     st.divider()
 
+    with st.expander("📖 本地中文操作手册 (使用前必读)", expanded=False):
+        st.markdown("""
+        **【模型定位】**：本页面为 **全局热力学平衡模型**（基于最小 Gibbs 自由能法）。它并不关心反应需要耗时多久、管道有多长，它只推演*在无限长时间下，当前配比能达到的能量与产率极值*。非常适合做气化炉的大尺度物料衡算与理论宏观上限预估。
+
+        **【核心摇杆解析】**
+        *   **氧煤比 (O/C)**：控制着系统反应的底色。**调高 O/C** 会促进煤炭燃烧释放海量热能，直接拉高炉温（但会使 CO 氧化为 $CO_2$ 导致有效气下降）；**调低 O/C** 有利于保护有效气，但可能因吸热的气化反应导致热量亏空，系统死机（未转化碳激增）。
+        *   **汽煤比 (S/C)**：水蒸气的加入有助于发生水煤气变换反应（WGS：$CO+H_2O \\rightleftharpoons CO_2+H_2$），能提升产气中的氢气占比，但因为气化反应属于强吸热，过多的汽煤比会拉低全炉操作温度。
+        *   **热损估测 (%)**：气流床通常的热损约为 1%~5%（视规模而定）。如果在配置中你**不知道该怎么设**，请留在这里，然后打开下方的【🛠️ 显示高级配置】->【🛠️ 智能热量反算】，输入你的主观期望温度（如 1350°C），算法能反算出如果要维持这个温度，当前系统能承受多大的热损。
+
+        **【进阶玩法建议】**
+        *   **解禁底层配置**：点击表单下方的 `[🛠️ 显示高级配置]` 可以亲自调节你那批实验煤的高低位热值、全元素分析参数以及管道入口的预热设定。
+        *   **切换弱反应器**：默认推荐 `RGibbs` 求全局最优点。但如果你觉得实际炉子温度过低，部分反应（如甲烷化）达不到理想平衡点，可以切成 `Stoic` 算法并植入温差（Approach Temp）来约束它们。
+        """)
+
     # [关键修改] 使用列布局代替 Sidebar
     # 左侧 (1.2): 参数输入区 | 右侧 (2.8): 结果展示区
     col_input, col_result = st.columns([1.2, 2.8], gap="medium")
@@ -81,118 +96,121 @@ def run():
     # 左侧：参数配置区域
     # ==========================================
     with col_input:
-        st.info("⚙️ **参数配置面板**")
+        st.info("🎯 **引导式操作面板 (Minimalist Mode)**")
         
         # 1. 验证工况加载
-        with st.expander("📂 加载验证工况", expanded=False):
-            case_name = st.selectbox("Select Case", ["Custom (Manual Input)"] + list(VALIDATION_CASES.keys()))
+        with st.container(border=True):
+            st.markdown("#### 📂 步骤 1. 选择参考模板")
+            st.caption("建议以此为工业基准起步，大幅缩少不必要的调参。")
+            case_name = st.selectbox("选择工况:", ["保持当前 (Custom)"] + list(VALIDATION_CASES.keys()), label_visibility="collapsed")
             
-            if case_name != "Custom (Manual Input)" and st.button("Load Case Data"):
+            if case_name != "保持当前 (Custom)" and st.button("预填该工况", type="secondary", use_container_width=True):
                 data = VALIDATION_CASES[case_name]["inputs"]
-                # 加载煤质
                 c_data = data["Coal Analysis"]
                 if c_data == "SAME_AS_BASE":
                     c_data = VALIDATION_CASES["Paper_Case_6 (Base)"]["inputs"]["Coal Analysis"]
                 for k, v in c_data.items():
                     if k in st.session_state: st.session_state[k] = v
-                    
-                # 加载工艺
                 p_data = data["Process Conditions"]
                 for k, v in p_data.items():
                     if k in st.session_state: st.session_state[k] = v
-                st.success(f"Loaded!")
+                st.success(f"已应用 {case_name}")
                 st.rerun()
 
-        # 2. 煤质数据
-        with st.expander("🪨 煤质属性", expanded=True):
-            selected_db_coal = st.selectbox("数据库", ["None"] + list(COAL_DATABASE.keys()))
-            if selected_db_coal != "None":
-                if st.button(f"应用 {selected_db_coal}"):
-                    db_data = COAL_DATABASE[selected_db_coal]
-                    for k, v in db_data.items():
-                        if k in st.session_state: st.session_state[k] = v
-                    if 'HHV_d' in db_data:
-                        st.session_state['HHV_Input'] = db_data['HHV_d'] * 1000.0
-                    st.rerun()
-
-            c1, c2 = st.columns(2)
-            st.session_state.Cd = c1.number_input("C", value=st.session_state.Cd, format="%.2f")
-            st.session_state.Hd = c2.number_input("H", value=st.session_state.Hd, format="%.2f")
-            st.session_state.Od = c1.number_input("O", value=st.session_state.Od, format="%.2f")
-            st.session_state.Nd = c2.number_input("N", value=st.session_state.Nd, format="%.2f")
-            st.session_state.Sd = c1.number_input("S", value=st.session_state.Sd, format="%.2f")
-            st.session_state.Ad = c2.number_input("Ash", value=st.session_state.Ad, format="%.2f")
-            st.session_state.Mt = st.number_input("Total Moisture (wt%)", value=st.session_state.Mt, format="%.2f")
-            # 这里的 Vd 和 FCd 虽然不参与平衡计算，但为了完整性保留
-            # st.session_state.Vd = st.number_input("Volatiles", value=st.session_state.Vd) 
-
-            hhv_mode = st.radio("HHV 来源", ["Input", "NICE1 Formula"], 
-                                index=st.session_state.HHV_Method, horizontal=True)
-            st.session_state.HHV_Method = 0 if hhv_mode == "Input" else 1
-            
-            if st.session_state.HHV_Method == 0:
-                st.session_state.HHV_Input = st.number_input("HHV (kJ/kg, Dry)", value=st.session_state.HHV_Input)
-
-        # 3. 工艺参数
-        with st.expander("🏭 工艺条件", expanded=True):
-            st.session_state.GasifierType = st.selectbox("炉型", ["Dry Powder", "CWS"], 
-                                                         index=0 if st.session_state.GasifierType=="Dry Powder" else 1)
-            
-            if st.session_state.GasifierType == "Dry Powder":
-                st.session_state.FeedRate = st.number_input("干煤投料 (kg/h)", value=st.session_state.FeedRate)
-            else:
-                st.session_state.FeedRate = st.number_input("煤浆流量 (kg/h)", value=st.session_state.FeedRate)
-                st.session_state.SlurryConc = st.number_input("浓度 (wt%)", value=st.session_state.SlurryConc)
-
-            c3, c4 = st.columns(2)
-            st.session_state.Ratio_OC = c3.number_input("氧煤比", value=st.session_state.Ratio_OC, format="%.4f")
-            st.session_state.Ratio_SC = c4.number_input("汽煤比", value=st.session_state.Ratio_SC, format="%.4f")
-            
-            st.session_state.P = c3.number_input("压力 (MPa)", value=st.session_state.P)
-            st.session_state.TIN = c4.number_input("入口 T (K)", value=st.session_state.TIN)
-            st.session_state.pt = st.number_input("氧纯度 (%)", value=st.session_state.pt)
+        # 核心参数面板
+        st.markdown("#### 🎛️ 步骤 2. 核心操纵杆")
+        st.session_state.GasifierType = st.radio("气化炉水设置", ["Dry Powder", "CWS"], 
+                                                     index=0 if st.session_state.GasifierType=="Dry Powder" else 1, horizontal=True)
         
-        # 4. 求解策略 (Solver)
-        with st.expander("🧮 求解策略 (Solver Settings)", expanded=False):
-            st.session_state.SolverMethod = st.selectbox("求解方法", ["RGibbs", "Stoic"], 
-                index=0 if st.session_state.SolverMethod=="RGibbs" else 1,
-                help="RGibbs: 全局最小化 (通用)\nStoic: 反应平衡常数法 (稳健, 支持温差)")
-            
-            if st.session_state.SolverMethod == "Stoic":
-                st.info("Temperature Approach Parameters (K)")
-                sc1, sc2 = st.columns(2)
-                st.session_state.DeltaT_WGS = sc1.number_input("ΔT (WGS)", value=st.session_state.DeltaT_WGS)
-                st.session_state.DeltaT_Meth = sc2.number_input("ΔT (Meth)", value=st.session_state.DeltaT_Meth)
-                st.caption("正值表示反应在更高温度下平衡 (抑制放热?)，负值表示在更低温度下平衡。")
+        c_feed, c_p = st.columns(2)
+        if st.session_state.GasifierType == "Dry Powder":
+            st.session_state.FeedRate = c_feed.number_input("干煤投料 (kg/h)", value=float(st.session_state.FeedRate))
+        else:
+            st.session_state.FeedRate = c_feed.number_input("煤浆流量 (kg/h)", value=float(st.session_state.FeedRate))
+            st.session_state.SlurryConc = st.number_input("水煤浆浓度 (wt%)", value=float(st.session_state.SlurryConc))
 
-        # 5. 智能校正
-        with st.expander("🛠️ 智能校正"):
-            st.session_state.HeatLossPercent = st.number_input("热损 (%)", value=st.session_state.HeatLossPercent, format="%.4f")
-            st.session_state.Target_T = st.number_input("目标出口 T (°C)", value=st.session_state.Target_T)
-            
-            if st.button("开始校正"):
-                input_data = {k: st.session_state[k] for k in st.session_state.keys() if isinstance(k, (str, int, float))}
-                try:
-                    model = GasifierModel(input_data)
-                    target_K = st.session_state.Target_T + 273.15
-                    with st.spinner("Calibrating..."):
-                        loss, _ = model.calculate_heat_loss_for_target_T(target_K)
-                        if loss < 0:
-                            st.warning(f"⚠️ 自热条件无法达到目标温度 (需供热)。强制热损=0%")
-                            st.info(f"💡 建议: 提高氧煤比 (当前={st.session_state.Ratio_OC}) 以增加反应热。")
-                            loss = 0.0
-                            
-                        # Check low heat loss
-                        if loss < 0.1 and loss >= 0:
-                             st.warning(f"热损过低 ({loss:.2f}%)，可能需要调整")
-
-                        st.session_state.HeatLossPercent = loss
-                        st.success(f"校正完成! 新热损: {loss:.4f}%")
-                    st.rerun()
-                except Exception as e:
-                    st.error(f"校正失败: {e}")
+        st.session_state.P = c_p.number_input("系统压力 (MPa)", value=float(st.session_state.P), step=0.1)
+        
+        c3, c4 = st.columns(2)
+        st.session_state.Ratio_OC = c3.number_input("氧煤比 (O/C)", value=float(st.session_state.Ratio_OC), format="%.3f", step=0.01)
+        st.session_state.Ratio_SC = c4.number_input("汽煤比 (S/C)", value=float(st.session_state.Ratio_SC), format="%.3f", step=0.01)
+        
+        st.session_state.HeatLossPercent = st.number_input("热损估测 (%)", value=float(st.session_state.HeatLossPercent), format="%.2f", step=0.5)
 
         st.markdown("---")
+        # 高级模式开关
+        advanced_mode = st.toggle("🛠️ 显示高级配置 (底层煤质/反应器约束)", value=st.session_state.get('advanced_mode', False))
+        st.session_state.advanced_mode = advanced_mode
+
+        if advanced_mode:
+            # 2. 煤质数据
+            with st.expander("🪨 详细煤质分析", expanded=True):
+                selected_db_coal = st.selectbox("从内置库填入煤", ["None"] + list(COAL_DATABASE.keys()))
+                if selected_db_coal != "None":
+                    if st.button(f"应用 {selected_db_coal}"):
+                        db_data = COAL_DATABASE[selected_db_coal]
+                        for k, v in db_data.items():
+                            if k in st.session_state: st.session_state[k] = v
+                        if 'HHV_d' in db_data:
+                            st.session_state['HHV_Input'] = db_data['HHV_d'] * 1000.0
+                        st.rerun()
+
+                c1, c2 = st.columns(2)
+                st.session_state.Cd = c1.number_input("C", value=float(st.session_state.Cd), format="%.2f")
+                st.session_state.Hd = c2.number_input("H", value=float(st.session_state.Hd), format="%.2f")
+                st.session_state.Od = c1.number_input("O", value=float(st.session_state.Od), format="%.2f")
+                st.session_state.Nd = c2.number_input("N", value=float(st.session_state.Nd), format="%.2f")
+                st.session_state.Sd = c1.number_input("S", value=float(st.session_state.Sd), format="%.2f")
+                st.session_state.Ad = c2.number_input("Ash", value=float(st.session_state.Ad), format="%.2f")
+                st.session_state.Mt = st.number_input("Total Moisture (wt%)", value=float(st.session_state.Mt), format="%.2f")
+
+                hhv_mode = st.radio("HHV 来源", ["Input", "NICE1 Formula"], 
+                                    index=st.session_state.HHV_Method, horizontal=True)
+                st.session_state.HHV_Method = 0 if hhv_mode == "Input" else 1
+                
+                if st.session_state.HHV_Method == 0:
+                    st.session_state.HHV_Input = st.number_input("HHV (kJ/kg, Dry)", value=float(st.session_state.HHV_Input))
+
+            # 3. 其它边界条件
+            with st.expander("🏭 附加管道条件", expanded=True):
+                st.session_state.TIN = st.number_input("入口 T (K)", value=float(st.session_state.TIN))
+                st.session_state.pt = st.number_input("氧纯度 (%)", value=float(st.session_state.pt))
+            
+            # 4. 求解策略 (Solver)
+            with st.expander("🧮 求解策略设置", expanded=False):
+                st.session_state.SolverMethod = st.selectbox("求解算法", ["RGibbs", "Stoic"], 
+                    index=0 if st.session_state.SolverMethod=="RGibbs" else 1,
+                    help="RGibbs: 全局能量最小化\nStoic: 温差校正反应平衡")
+                
+                if st.session_state.SolverMethod == "Stoic":
+                    st.info("Temperature Approach (K)")
+                    sc1, sc2 = st.columns(2)
+                    st.session_state.DeltaT_WGS = sc1.number_input("WGS ΔT", value=float(st.session_state.DeltaT_WGS))
+                    st.session_state.DeltaT_Meth = sc2.number_input("Meth ΔT", value=float(st.session_state.DeltaT_Meth))
+
+            # 5. 智能校正
+            with st.expander("🛠️ 智能热量反算"):
+                st.session_state.Target_T = st.number_input("预估目标 T (°C)", value=float(st.session_state.Target_T))
+                
+                if st.button("开始校正寻找合适热损"):
+                    input_data = {k: st.session_state[k] for k in st.session_state.keys() if isinstance(k, (str, int, float))}
+                    try:
+                        model = GasifierModel(input_data)
+                        target_K = st.session_state.Target_T + 273.15
+                        with st.spinner("Calibrating..."):
+                            loss, _ = model.calculate_heat_loss_for_target_T(target_K)
+                            if loss < 0:
+                                st.warning(f"自热条件无法达到目标温度。强制热损置0。提议: 增大 O/C")
+                                loss = 0.0
+                            elif loss < 0.1:
+                                 st.warning(f"热损过低: {loss:.2f}%")
+                            st.session_state.HeatLossPercent = loss
+                            st.success(f"校正成功: 新热损 {loss:.4f}%")
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"校正失败: {e}")
+
+        st.markdown("<br>", unsafe_allow_html=True)
         # 运行按钮放在左侧栏底部
         run_btn = st.button("🚀 开始计算 (Run)", type="primary", use_container_width=True)
 

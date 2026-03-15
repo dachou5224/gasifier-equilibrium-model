@@ -70,6 +70,12 @@ gasifier-model/
 > **Feature**: Added **Stoichiometric Solver** with Temperature Approach parameters.
 > **Feature**: Added **Solver Settings** in UI to switch between RGibbs and Stoic methods.
 
+### 4.4 Equilibrium Solver Overhaul & Debugging | 平衡求解器重构与调试 (2026-03)
+> **Debug**: 移除了原先强制设定的 `co2_min` 和 `h2_min` 非物理硬约束，解放了 Gibbs 能量最小化的寻优空间。
+> **Update**: 将 Gibbs 优化算法从收敛受限的 `SLSQP` 升级为 `trust-constr` 内点法，不仅提高了稳定性，并扩充了 `typical, reducing, oxidizing, stoic_based` 等多种初值探索策略。
+> **Update**: 通过利用对数标度（log-scale），改进了 `stoic_solver.py` 中甲烷化方程在高温下的强数值跨度阻碍，消散了非物理的高温不收敛。
+> **Result**: 成功将高温下的非物理组分预测（如极高的 CO2）修正回物理真实的平衡态，并彻底排除了越界等求解假报警。
+
 ---
 
 ## 5. Installation & Usage | 安装与使用

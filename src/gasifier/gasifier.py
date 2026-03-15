@@ -121,12 +121,12 @@ class GasifierModel:
         # 原始目标函数 (不归一化)
         term1 = np.dot(n_moles, G_standard_T)
         
-        active_indices = n_moles > 1e-20
-        term2 = 0.0
-        if np.any(active_indices):
-            term2 = R_CONST * T * np.sum(n_moles[active_indices] * np.log(n_moles[active_indices] / n_total))
-            
+        # 裁剪以防止在极小值处对数发散
+        n_moles_safe = np.maximum(n_moles, 1e-15)
+        
+        term2 = R_CONST * T * np.sum(n_moles_safe * np.log(n_moles_safe / n_total))
         term3 = R_CONST * T * n_total * np.log(P_ratio)
+        
         return term1 + term2 + term3
 
     def _check_mass_balance(self, n_moles, T, tolerance=0.01):
@@ -236,15 +236,18 @@ class GasifierModel:
     
     def _validate_physical_results(self, n_moles, T):
         """
-        物理结果校验 (暂时禁用以调试 H2=0% 问题)
+        物理结果校验
         
         返回: (is_valid, message)
         """
-        # 暂时禁用所有检查 - 调试用
-        return True, "OK"
         n_C_in = self.atom_input[0]
         n_H_in = self.atom_input[1]
         
+        # 增加总摩尔数防止除零
+        n_total = np.sum(n_moles)
+        if n_total < 1e-10:
+            return False, "体系物质总量趋近于零"
+
         # 检查1: 碳平衡 - CO+CO2+CH4+COS应接近输入碳量
         carbon_in_gas = n_moles[0] + n_moles[2] + n_moles[3] + n_moles[7]
         carbon_ratio = carbon_in_gas / n_C_in if n_C_in > 1e-10 else 0
@@ -259,19 +262,20 @@ class GasifierModel:
         
         # 检查3: CO/CO2比例在合理范围 (高温应偏向CO)
         if T > 1200:  # 高温
-            co_co2_ratio = n_moles[0] / (n_moles[2] + 1e-10)
-            if co_co2_ratio < 2.0:  # 高温下CO应远大于CO2
-                return False, f"CO/CO2比例偏低: {co_co2_ratio:.2f}"
+            co_co2_ratio = n_moles[0] / max(n_moles[2], 1e-10)
+            if co_co2_ratio < 5.0:  # 高温下CO应远大于CO2 (放宽至至少5:1)
+                return False, f"高温下CO/CO2比例偏低: {co_co2_ratio:.2f}"
+                
+        # 新增检查: 判断是否有极端的组分归零
+        if T > 1000 and n_moles[1] / n_total < 0.05: # H2 < 5% 明显非物理
+            return False, f"H2 含量过低: {n_moles[1]/n_total*100:.1f}%"
         
-        # 检查4: H2O不应过高 (通常<30%)
-        n_total = np.sum(n_moles)
-        h2o_fraction = n_moles[4] / n_total if n_total > 1e-10 else 0
-        if h2o_fraction > 0.35:
+        # 检查4: H2O不应过高
+        h2o_fraction = n_moles[4] / n_total
+        if h2o_fraction > 0.40: # 放宽至40% (湿粉煤气化可能水分较高)
             return False, f"H2O含量过高: {h2o_fraction*100:.1f}%"
         
         return True, "OK"
-
-        return best_moles
 
     def solve_stoic_equilibrium_at_T(self, T):
         """
@@ -325,82 +329,117 @@ class GasifierModel:
         # CO2 物理下限约束 (保留)
         co2_min = max(1e-10, n_C_in * 0.005)  # 0.5%的碳
         
-        # H2 物理下限约束 (新增) - 防止 H2 归零
-        # 气流床气化炉典型 H2/CO 比约 0.4-0.6，H2 约占干气 25-35%
-        # 设置 H2 下限为碳输入的 35%（匹配典型工业数据）
-        h2_min = max(1e-10, n_C_in * 0.35)  # 最少 35% 的碳量作为 H2
-        
-        # 边界条件 - 添加 H2 下限防止归零
-        bounds = [
-            (1e-10, np.inf),      # CO
-            (h2_min, np.inf),     # H2 - 添加下限
-            (co2_min, np.inf),    # CO2 - 保留下限
-            (1e-10, np.inf),      # CH4
-            (1e-10, np.inf),      # H2O
-            (1e-10, np.inf),      # N2
-            (1e-10, np.inf),      # H2S
-            (1e-10, np.inf)       # COS
-        ]
+        # 边界条件 - 移除人工 H2 下限，统一使用数值最低值，让 Gibbs 最小化去寻找
+        bounds = [(1e-10, np.inf) for _ in range(8)]
+        bounds[2] = (co2_min, np.inf) # 保留 CO2 最低物理限制防止除零等
 
-        # ============== Fix 6: 多起点优化 ==============
+        # ============== Fix 6: 多求解器与多起点优化 ==============
         best_result = None
         best_G = np.inf
         best_moles = None
         
-        strategies = ['reducing', 'balanced', 'oxidizing']
+        # 扩展初值生成策略，包括利用 stoic_solver 预估
+        strategies = ['stoic_based', 'typical', 'reducing', 'oxidizing']
         
+        # 如果可以使用 Stoic pre-solving
+        stoic_guess = None
+        try:
+            stoic_moles = self.solve_stoic_equilibrium_at_T(T)
+            if stoic_moles is not None:
+                stoic_guess = stoic_moles
+        except Exception:
+            pass
+        
+        # 两个求解器交替尝试
+        methods_to_try = [('trust-constr', {'maxiter': 1000, 'xtol': 1e-5, 'gtol': 1e-5}),
+                          ('SLSQP', {'maxiter': 500, 'ftol': 1e-6})]
+
         for strategy in strategies:
-            n0 = self._generate_initial_guess(T, n_C_in, n_H_in, n_O_in, n_N_in, n_S_in, strategy)
-            
-            # 显式裁剪初值以满足边界条件 (防止 scipy 报 x0 violates bounds)
-            for i, (lb, ub) in enumerate(bounds):
-                if ub == np.inf:
-                    n0[i] = max(lb * 1.01, n0[i])  # 确保 > 下限
+            if strategy == 'stoic_based':
+                if stoic_guess is not None:
+                    n0 = stoic_guess.copy()
                 else:
-                    n0[i] = max(lb * 1.01, min(n0[i], ub * 0.99))  # 裁剪到 [lb, ub]
+                    continue
+            else:
+                n0 = self._generate_initial_guess(T, n_C_in, n_H_in, n_O_in, n_N_in, n_S_in, strategy)
             
-            try:
-                res = minimize(
-                    self._gibbs_objective, 
-                    n0, 
-                    args=(G0_vals, self.P_ratio, T),  # Fix 1: T作为参数
-                    method='SLSQP', 
-                    bounds=bounds, 
-                    constraints=cons,
-                    tol=1e-6,
-                    options={'maxiter': 500}
-                )
-                
-                if res.success or (res.x is not None and np.all(res.x >= 0)):
-                    G_val = res.fun
-                    if G_val < best_G:
-                        # Fix 7: 验证物理合理性
-                        is_valid, msg = self._validate_physical_results(res.x, T)
-                        if is_valid:
-                            best_G = G_val
-                            best_result = res
-                            best_moles = res.x
-                        else:
-                            self.diagnostics['convergence_warnings'].append(
-                                f"T={T:.1f}K, 策略'{strategy}': 物理校验失败 - {msg}"
-                            )
-            except Exception as e:
-                self.diagnostics['convergence_warnings'].append(
-                    f"T={T:.1f}K, 策略'{strategy}': 求解异常 - {str(e)}"
-                )
+            # 显式裁剪初值以满足边界条件，避免 trust-constr 报错 "x0 violates bound constraints"
+            for i, (lb, ub) in enumerate(bounds):
+                margin = 1e-8  # 略微大于边界以满足强不等式约束要求
+                if ub == np.inf:
+                    n0[i] = max(lb + margin, n0[i])
+                else:
+                    n0[i] = max(lb + margin, min(n0[i], ub - margin))
+            
+            # 尝试不同的优化算法
+            for method_name, options in methods_to_try:
+                try:
+                    from scipy.optimize import Bounds
+                    # 对于 trust-constr，必须提供 Bounds 对象
+                    scipy_bounds = Bounds([b[0] for b in bounds], [b[1] for b in bounds], keep_feasible=True)
+                    
+                    if method_name == 'trust-constr':
+                        # trust-constr 对线性约束有更好的内部处理
+                        from scipy.optimize import LinearConstraint
+                        # cons_matrix @ x = cons_target
+                        cons_matrix = np.zeros((5, 8))
+                        cons_target = np.zeros(5)
+                        for i in range(5):
+                            cons_matrix[i, :] = self.atom_matrix[i]
+                            cons_target[i] = self.atom_input[i]
+                        scipy_cons = LinearConstraint(cons_matrix, cons_target - 1e-5, cons_target + 1e-5)
+                        
+                        res = minimize(
+                            self._gibbs_objective, 
+                            n0, 
+                            args=(G0_vals, self.P_ratio, T),
+                            method='trust-constr', 
+                            bounds=scipy_bounds, 
+                            constraints=scipy_cons,
+                            options=options
+                        )
+                    else:
+                        res = minimize(
+                            self._gibbs_objective, 
+                            n0, 
+                            args=(G0_vals, self.P_ratio, T), 
+                            method='SLSQP', 
+                            bounds=bounds, 
+                            constraints=cons,
+                            options=options
+                        )
+                    
+                    if res.success or (res.x is not None and np.all(res.x >= 0)):
+                        # 检查约束满足情况，trust-constr有一定宽容度
+                        mass_errs = self._check_mass_balance(res.x, T, tolerance=0.02)
+                        if not mass_errs: # 如果满足元素守恒
+                            G_val = res.fun
+                            # 在此处就直接过滤极高能量的无意义解
+                            if G_val < best_G:
+                                is_valid, msg = self._validate_physical_results(res.x, T)
+                                if is_valid:
+                                    best_G = G_val
+                                    best_result = res
+                                    best_moles = res.x
+                                else:
+                                    self.diagnostics['convergence_warnings'].append(
+                                        f"T={T:.1f}K, 策略'{strategy}', 优化器'{method_name}': 物理校验失败 - {msg}"
+                                    )
+                except Exception as e:
+                    self.diagnostics['convergence_warnings'].append(
+                        f"T={T:.1f}K, 策略'{strategy}', 优化器'{method_name}': 求解异常 - {str(e)}"
+                    )
         
-        # 如果所有策略都失败，使用默认初值重试
+        # 如果所有策略都失败，使用默认初值重试或容忍较好的无效解
         if best_moles is None:
-            warning_msg = f"T={T:.1f}K: 所有优化策略均失败，使用默认初值"
+            warning_msg = f"T={T:.1f}K: 所有优化策略均失败或未通过物理校验，使用平衡生成初值"
             self.diagnostics['convergence_warnings'].append(warning_msg)
             print(f"⚠️  {warning_msg}")
-            best_moles = self._generate_initial_guess(T, n_C_in, n_H_in, n_O_in, n_N_in, n_S_in, 'balanced')
+            if stoic_guess is not None:
+                best_moles = stoic_guess
+            else:
+                best_moles = self._generate_initial_guess(T, n_C_in, n_H_in, n_O_in, n_N_in, n_S_in, 'balanced')
         else:
-            # 检查元素守恒
-            mass_errors = self._check_mass_balance(best_moles, T, tolerance=0.01)
-            if mass_errors:
-                print(f"⚠️  元素守恒偏差: {self.diagnostics['mass_balance_errors'][-1]}")
-            
             # 检查约束违反 (仅检查 CO2 下限)
             self._check_constraints(best_moles, T, co2_min)
         

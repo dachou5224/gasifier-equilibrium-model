@@ -117,26 +117,23 @@ class StoichiometricSolver:
             n_total = n_tot_cho + n_N2 + n_H2S + n_COS
             
             # 4. WGS
-            # K_wgs = (n_CO2 * n_H2) / (n_CO * n_H2O)
-            # Linearized form: K * CO * H2O - CO2 * H2 = 0
-            # Scale by scale_mol^2
-            term_wgs = (K_wgs * n_CO * n_H2O - n_CO2 * n_H2) / (scale_mol**2)
+            # WGS用对数形式或者归一化形式
+            term_wgs_lhs = K_wgs * n_CO * n_H2O
+            term_wgs_rhs = n_CO2 * n_H2
+            res_wgs = np.log((term_wgs_lhs + 1e-15) / (term_wgs_rhs + 1e-15))
             
             # 5. Methanation
+            # 原始形式：
             # K_meth = (n_CH4 * n_H2O / (n_CO * n_H2^3)) * (P / n_total)^-2
-            # K * CO * H2^3 * P^2 - CH4 * H2O * n_total^2 = 0
-            # Scale? LHS is approx K * M * M^3 * P^2. RHS is M * M * M^2 = M^4.
-            # Divide by (scale_mol^4)
+            # K_meth * n_CO * n_H2^3 * P^2 = n_CH4 * n_H2O * n_total^2
+            # 改用对数形式处理巨大数值跨度问题
             term_meth_lhs = K_meth * n_CO * (n_H2**3) * (P_bar**2)
             term_meth_rhs = n_CH4 * n_H2O * (n_total**2)
             
-            # Additional scaling for Methanation (often huge numbers)
-            # If K is very small, LHS is small. RHS dominates.
-            # If K is large, LHS dominates.
-            norm_factor = (scale_mol**4) * max(1.0, P_bar**2) 
-            res_meth = (term_meth_lhs - term_meth_rhs) / norm_factor
+            # 使用对数差异作为残差
+            res_meth = np.log((term_meth_lhs + 1e-15) / (term_meth_rhs + 1e-15))
             
-            return [res_C, res_H, res_O, term_wgs, res_meth]
+            return [res_C, res_H, res_O, res_wgs, res_meth]
 
         # Use 'lm' first (Levenberg-Marquardt), robust for efficient least-squares
         sol = root(residuals, x0, method='lm', options={'ftol': 1e-10})
