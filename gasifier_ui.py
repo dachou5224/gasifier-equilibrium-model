@@ -11,6 +11,9 @@ MODIFICATION HISTORY
     - [Feature] Line 126-150: 智能校正功能 (热损/氧煤比自动调整)
     - [Feature] Line 210-215: 诊断信息展示 (能量/元素平衡)
     - [UI] Line 171-204: 优化结果展示 (KPI卡片 + 饼图)
+2026-03-24  v2.1  刘臻
+    - [Feature] Tabs 增加「激冷湿合成气」计算器，集成 quench_syngas.py
+    - [Fix] 验证工况对比条件与下拉框一致；气化炉 input_data 排除 quench_* 键
 ================================================================================
 """
 
@@ -30,6 +33,12 @@ if src_path not in sys.path:
 from gasifier.gasifier import GasifierModel
 from gasifier.coal_props import COAL_DATABASE
 from gasifier.validation_cases import VALIDATION_CASES
+from gasifier.quench_syngas import (
+    DEFAULT_COOLING_WATER_MASS_FLOW_KG_H,
+    DEFAULT_T_WATER_IN_CELSIUS,
+    evaluate_quench_syngas,
+    solve_wet_syngas_temperature_after_quench,
+)
 
 # --- 1. 初始化 Session State (保持不变) ---
 def init_session_state():
@@ -54,7 +63,19 @@ def init_session_state():
         "SolverMethod": "RGibbs", # RGibbs or Stoic
         "DeltaT_WGS": 0.0,
         "DeltaT_Meth": 0.0,
-        "advanced_mode": False
+        "advanced_mode": False,
+        # 激冷湿合成气计算器（独立模块，与 quench_syngas 默认一致）
+        "quench_V_dry": 5647.0,
+        "quench_T_gas_in": 1397.0,
+        "quench_P_total": 1.6013,
+        "quench_Cp_gas": 2.31,
+        "quench_T_water_in": DEFAULT_T_WATER_IN_CELSIUS,
+        "quench_cooling_water_flow_kg_h": DEFAULT_COOLING_WATER_MASS_FLOW_KG_H,
+        "quench_water_saturated": False,
+        "quench_H_water_override": None,
+        "quench_T_bracket_low": 50.0,
+        "quench_T_bracket_high": 300.0,
+        "quench_trial_T": 175.0,
     }
     for key, val in defaults.items():
         if key not in st.session_state:
@@ -73,6 +94,18 @@ def run():
     st.markdown("[📖 查看项目文档 (README) & 算法说明](https://github.com/dachou5224/gasifier-equilibrium-model/blob/main/README.md)")
     
     st.divider()
+
+    tab_gas, tab_quench = st.tabs(["气化炉平衡", "激冷湿合成气"])
+
+    with tab_gas:
+        _render_gasifier_tab()
+    with tab_quench:
+        _render_quench_syngas_tab()
+
+
+def _render_gasifier_tab():
+    """主气化炉平衡模型界面（原 col_input / col_result）。"""
+    init_session_state()
 
     with st.expander("📖 本地中文操作手册 (使用前必读)", expanded=False):
         st.markdown("""
@@ -193,7 +226,13 @@ def run():
                 st.session_state.Target_T = st.number_input("预估目标 T (°C)", value=float(st.session_state.Target_T))
                 
                 if st.button("开始校正寻找合适热损"):
-                    input_data = {k: st.session_state[k] for k in st.session_state.keys() if isinstance(k, (str, int, float))}
+                    input_data = {
+                        k: st.session_state[k]
+                        for k in st.session_state.keys()
+                        if isinstance(k, str)
+                        and not str(k).startswith("quench_")
+                        and not str(k).startswith("last_gasifier_")
+                    }
                     try:
                         model = GasifierModel(input_data)
                         target_K = st.session_state.Target_T + 273.15
@@ -220,12 +259,23 @@ def run():
     # ==========================================
     with col_result:
         if run_btn:
-            input_data = {k: st.session_state[k] for k in st.session_state.keys() if isinstance(k, (str, int, float))}
+            input_data = {
+                k: st.session_state[k]
+                for k in st.session_state.keys()
+                if isinstance(k, str)
+                and not str(k).startswith("quench_")
+                and not str(k).startswith("last_gasifier_")
+            }
             
             try:
                 model = GasifierModel(input_data)
                 with st.spinner("Solving equilibrium..."):
                     res = model.run_simulation()
+
+                # 供「激冷湿合成气」页一键填入
+                st.session_state.last_gasifier_Vg_dry = res["Vg_dry"]
+                st.session_state.last_gasifier_TOUT_C = res["TOUT_C"]
+                st.session_state.last_gasifier_P_MPa = float(st.session_state.P)
                 
                 st.success("计算完成 (Calculation Complete)")
 
@@ -276,7 +326,7 @@ def run():
                     d3.write(f"**计算 HHV:** {res['HHV']:.2f} kJ/kg")
 
                 # 5. 验证
-                if case_name != "Custom (Manual Input)":
+                if case_name != "保持当前 (Custom)":
                     st.subheader("4. 验证对比 (Validation)")
                     tgt = VALIDATION_CASES[case_name]["expected_output"]
                     val_data = {
@@ -296,6 +346,198 @@ def run():
             # 默认状态
             st.info("👈 请在左侧配置煤质和工艺参数，然后点击 **开始计算**。")
             st.caption("Gasifier Model v2.0 | Integrated into Chem Portal")
+
+
+def _render_quench_syngas_tab():
+    """激冷后湿合成气平衡温度：独立计算器（quench_syngas）。"""
+    init_session_state()
+
+    st.markdown(
+        "根据干气显热与蒸发吸热平衡，求解 **激冷后出口温度**（T_out）。"
+        " 饱和水蒸气分压与汽/液焓来自内置蒸汽表插值。"
+    )
+    st.caption(
+        "默认激冷水温度与流量与 `quench_syngas` 一致；可将「饱和液态水」用于高温进水（如 180℃）。"
+    )
+
+    col_in, col_out = st.columns([1.2, 2.8], gap="medium")
+
+    with col_in:
+        st.subheader("输入")
+        if st.button("从上次气化炉结果填入", help="需先在「气化炉平衡」页成功运行一次计算"):
+            v = st.session_state.get("last_gasifier_Vg_dry")
+            if v is not None:
+                st.session_state.quench_V_dry = float(v)
+                st.session_state.quench_T_gas_in = float(st.session_state.get("last_gasifier_TOUT_C", 1397.0))
+                st.session_state.quench_P_total = float(st.session_state.get("last_gasifier_P_MPa", 1.6013))
+                st.success("已填入干气流量、出口温度、系统压力")
+                st.rerun()
+            else:
+                st.warning("尚无气化炉计算结果，请先运行主模型。")
+
+        st.session_state.quench_V_dry = st.number_input(
+            "干合成气流量 V_dry (Nm³/h)",
+            min_value=1.0,
+            value=float(st.session_state.quench_V_dry),
+            format="%.1f",
+        )
+        st.session_state.quench_T_gas_in = st.number_input(
+            "干气进口温度 (°C)",
+            min_value=0.0,
+            max_value=2000.0,
+            value=float(st.session_state.quench_T_gas_in),
+            format="%.1f",
+        )
+        st.session_state.quench_P_total = st.number_input(
+            "系统总压力 P（绝压, MPa.a）",
+            min_value=0.001,
+            value=float(st.session_state.quench_P_total),
+            format="%.4f",
+            step=0.01,
+        )
+        st.session_state.quench_Cp_gas = st.number_input(
+            "干气平均体积比热 Cp (kJ/(Nm³·℃))",
+            min_value=0.01,
+            value=float(st.session_state.quench_Cp_gas),
+            format="%.3f",
+            step=0.01,
+        )
+        st.markdown("**激冷水**")
+        st.session_state.quench_T_water_in = st.number_input(
+            "激冷水温度 (°C)",
+            value=float(st.session_state.quench_T_water_in),
+            format="%.1f",
+        )
+        st.session_state.quench_cooling_water_flow_kg_h = st.number_input(
+            "激冷水质量流量 (kg/h)",
+            min_value=0.0,
+            value=float(st.session_state.quench_cooling_water_flow_kg_h),
+            format="%.1f",
+            help="设为 0 表示不校核流量（内部按 None 处理）",
+        )
+        st.session_state.quench_water_saturated = st.checkbox(
+            "进水为饱和液态水（用 h' 查表）",
+            value=bool(st.session_state.quench_water_saturated),
+        )
+
+        use_h_override = st.checkbox(
+            "手动指定进口水比焓 H（kJ/kg）",
+            value=st.session_state.quench_H_water_override is not None,
+        )
+        if use_h_override:
+            h_def = float(st.session_state.quench_H_water_override or 175.6)
+            st.session_state.quench_H_water_override = st.number_input(
+                "H_water_in (kJ/kg)",
+                value=h_def,
+                format="%.2f",
+            )
+        else:
+            st.session_state.quench_H_water_override = None
+
+        st.markdown("**求根区间 (°C)**")
+        c_lo, c_hi = st.columns(2)
+        st.session_state.quench_T_bracket_low = c_lo.number_input(
+            "下限",
+            value=float(st.session_state.quench_T_bracket_low),
+            format="%.1f",
+        )
+        st.session_state.quench_T_bracket_high = c_hi.number_input(
+            "上限",
+            value=float(st.session_state.quench_T_bracket_high),
+            format="%.1f",
+        )
+
+        st.session_state.quench_trial_T = st.number_input(
+            "试算温度（仅用于试算表）",
+            value=float(st.session_state.quench_trial_T),
+            format="%.1f",
+        )
+
+        run_quench = st.button("求解平衡出口温度", type="primary", use_container_width=True)
+        trial_btn = st.button("仅试算当前假定温度", use_container_width=True)
+
+    flow_kw = st.session_state.quench_cooling_water_flow_kg_h
+    flow_arg = None if flow_kw <= 0 else float(flow_kw)
+
+    with col_out:
+        st.subheader("结果")
+        st.caption("ΔQ = Q_release − Q_absorb，平衡时 ΔQ → 0")
+
+        if trial_btn:
+            try:
+                st_trial = evaluate_quench_syngas(
+                    float(st.session_state.quench_trial_T),
+                    float(st.session_state.quench_V_dry),
+                    float(st.session_state.quench_T_gas_in),
+                    float(st.session_state.quench_P_total),
+                    float(st.session_state.quench_Cp_gas),
+                    T_water_in_celsius=float(st.session_state.quench_T_water_in),
+                    H_water_in_kj_kg=st.session_state.quench_H_water_override,
+                    water_inlet_saturated_liquid=bool(st.session_state.quench_water_saturated),
+                    cooling_water_mass_flow_kg_h=flow_arg,
+                )
+                st.info(f"假定 T_out = **{st.session_state.quench_trial_T:.2f} °C**")
+                _show_quench_state(st_trial)
+            except Exception as e:
+                st.error(str(e))
+                st.exception(e)
+
+        if run_quench:
+            try:
+                T_hi = float(st.session_state.quench_T_bracket_high)
+                T_lo = float(st.session_state.quench_T_bracket_low)
+                if T_lo >= T_hi:
+                    st.error("求根区间无效：下限须小于上限。")
+                else:
+                    T_out, st_f = solve_wet_syngas_temperature_after_quench(
+                        float(st.session_state.quench_V_dry),
+                        float(st.session_state.quench_T_gas_in),
+                        float(st.session_state.quench_P_total),
+                        float(st.session_state.quench_Cp_gas),
+                        T_water_in_celsius=float(st.session_state.quench_T_water_in),
+                        H_water_in_kj_kg=st.session_state.quench_H_water_override,
+                        water_inlet_saturated_liquid=bool(st.session_state.quench_water_saturated),
+                        cooling_water_mass_flow_kg_h=flow_arg,
+                        T_bracket_low_c=T_lo,
+                        T_bracket_high_c=T_hi,
+                    )
+                    st.success(f"平衡出口温度 **T_out = {T_out:.4f} °C**")
+                    _show_quench_state(st_f)
+            except Exception as e:
+                st.error(str(e))
+                st.exception(e)
+
+        if not trial_btn and not run_quench:
+            st.info("👈 填写左侧参数后点击 **求解** 或 **试算**。")
+
+
+def _show_quench_state(state):
+    """展示 QuenchSyngasState 为表格 + 指标（参数勿用名 st，以免遮蔽 streamlit）。"""
+    d = state.to_dict()
+    m1, m2, m3, m4 = st.columns(4)
+    m1.metric("T_out", f"{d['T_out_C']:.3f} °C")
+    m2.metric("y_H2O", f"{d['y_H2O']*100:.2f} %")
+    m3.metric("ΔQ", f"{d['delta_Q_kJ_h']:.0f} kJ/h")
+    m4.metric(
+        "蒸发量 vs 流量",
+        "✓" if d["evaporation_within_flow_limit"] else "不足",
+    )
+    rows = [
+        ("饱和蒸汽压 P_sat", f"{d['P_sat_MPa_a']:.6f} MPa.a"),
+        ("蒸发水体积流量 V_H2O", f"{d['V_H2O_Nm3_h']:.2f} Nm³/h"),
+        ("蒸发水质量流量 m_H2O", f"{d['m_H2O_kg_h']:.2f} kg/h"),
+        ("饱和蒸汽比焓 h''", f"{d['H_vapor_kJ_kg']:.2f} kJ/kg"),
+        ("Q_release", f"{d['Q_release_kJ_h']:.0f} kJ/h"),
+        ("Q_absorb", f"{d['Q_absorb_kJ_h']:.0f} kJ/h"),
+        ("激冷水进口焓（解析）", f"{d['H_water_in_kJ_kg']:.2f} kJ/kg"),
+        ("激冷水温度（输入）", f"{d['T_water_in_C']:.2f} °C"),
+        (
+            "激冷水流量（kg/h）",
+            "不校核" if d["cooling_water_mass_flow_kg_h"] is None else f"{d['cooling_water_mass_flow_kg_h']:.1f}",
+        ),
+    ]
+    st.table(pd.DataFrame(rows, columns=["量", "数值"]))
+
 
 # --- 3. 脚本入口 ---
 if __name__ == "__main__":
