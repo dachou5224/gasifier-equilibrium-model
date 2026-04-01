@@ -17,28 +17,59 @@ MODIFICATION HISTORY
 ================================================================================
 """
 
-import streamlit as st
-import pandas as pd
-import numpy as np
-import plotly.graph_objects as go
-import sys
+import json
 import os
+import sys
+from pathlib import Path
+
+import numpy as np
+import pandas as pd
+import plotly.graph_objects as go
+import streamlit as st
 
 # Add src to path so we can import gasifier package
 current_dir = os.path.dirname(os.path.abspath(__file__))
 src_path = os.path.join(current_dir, 'src')
 if src_path not in sys.path:
     sys.path.insert(0, src_path)
+scripts_path = os.path.join(current_dir, 'scripts')
+if scripts_path not in sys.path:
+    sys.path.insert(0, scripts_path)
 
 from gasifier.gasifier import GasifierModel
 from gasifier.coal_props import COAL_DATABASE
-from gasifier.validation_cases import VALIDATION_CASES
 from gasifier.quench_syngas import (
     DEFAULT_COOLING_WATER_MASS_FLOW_KG_H,
     DEFAULT_T_WATER_IN_CELSIUS,
     evaluate_quench_syngas,
     solve_wet_syngas_temperature_after_quench,
 )
+from validation_profile import TUNED_19CASES_PROFILE, build_profile_inputs, select_best_validation_candidate
+
+
+PROJECT_ROOT = Path(current_dir)
+GENERATED_CASES_PATH = PROJECT_ROOT / "generated" / "validation_cases_from_kinetic.json"
+VALIDATION_RESULT_PATHS = (
+    PROJECT_ROOT / "generated" / "validation" / "validation_results.json",
+    PROJECT_ROOT / "tests" / "validation_results.json",
+)
+
+
+def _load_generated_cases():
+    if GENERATED_CASES_PATH.exists():
+        return json.loads(GENERATED_CASES_PATH.read_text(encoding="utf-8"))
+    return {}
+
+
+def _load_validation_snapshot():
+    for path in VALIDATION_RESULT_PATHS:
+        if path.exists():
+            return json.loads(path.read_text(encoding="utf-8")), path
+    return None, None
+
+
+VALIDATION_CASES = _load_generated_cases()
+VALIDATION_SNAPSHOT, VALIDATION_SNAPSHOT_PATH = _load_validation_snapshot()
 
 # --- 1. 初始化 Session State (保持不变) ---
 def init_session_state():
@@ -50,20 +81,28 @@ def init_session_state():
         # Process
         "FeedRate": 1000.0,
         "SlurryConc": 60.0,
-        "Ratio_OC": 1.0, # Updated default
+        "Ratio_OC": 1.0,
         "Ratio_SC": 0.08,
         "pt": 99.6,
         "P": 4.0,
         "TIN": 300.0,
-        "HeatLossPercent": 1.0,
+        "HeatLossPercent": 3.0,
         "TR": 1500.0,
         "T_Scrubber": 210.0,
         "GasifierType": "Dry Powder",
-        "Target_T": 1370.0, # 校正目标温度
-        "SolverMethod": "RGibbs", # RGibbs or Stoic
+        "Target_T": 1370.0,
+        "SolverMethod": "Stoic",
         "DeltaT_WGS": 0.0,
         "DeltaT_Meth": 0.0,
+        "HeatLossMode": TUNED_19CASES_PROFILE["HeatLossMode"],
+        "CarbonConversionMode": TUNED_19CASES_PROFILE["CarbonConversionMode"],
+        "DeltaTMode": TUNED_19CASES_PROFILE["DeltaTMode"],
+        "CharExtentMode": TUNED_19CASES_PROFILE["CharExtentMode"],
         "advanced_mode": False,
+        "use_tuned_profile": True,
+        "use_auto_strategy": True,
+        "selected_validation_case": "保持当前 (Custom)",
+        "last_case_name": None,
         # 激冷湿合成气计算器（独立模块，与 quench_syngas 默认一致）
         "quench_V_dry": 5647.0,
         "quench_T_gas_in": 1397.0,
@@ -81,6 +120,87 @@ def init_session_state():
         if key not in st.session_state:
             st.session_state[key] = val
 
+
+def _collect_input_data_from_state():
+    keys = [
+        "Cd", "Hd", "Od", "Nd", "Sd", "Ad", "Vd", "FCd", "Mt", "HHV_Input", "HHV_Method",
+        "FeedRate", "SlurryConc", "Ratio_OC", "Ratio_SC", "pt", "P", "TIN", "TR",
+        "HeatLossPercent", "GasifierType", "SolverMethod", "DeltaT_WGS", "DeltaT_Meth",
+        "HeatLossMode", "CarbonConversionMode", "DeltaTMode", "CharExtentMode",
+    ]
+    return {key: st.session_state[key] for key in keys if key in st.session_state}
+
+
+def _apply_case_to_session(case_name):
+    if case_name not in VALIDATION_CASES:
+        return
+    case = VALIDATION_CASES[case_name]
+    inputs = build_profile_inputs(case, profile="tuned-19cases" if st.session_state.use_tuned_profile else None)
+    for key, value in inputs.items():
+        st.session_state[key] = value
+    st.session_state.selected_validation_case = case_name
+    st.session_state.last_case_name = case_name
+
+
+def _get_snapshot_record(case_name):
+    if not VALIDATION_SNAPSHOT or not case_name or case_name == "保持当前 (Custom)":
+        return None
+    records = VALIDATION_SNAPSHOT.get("records", [])
+    for record in records:
+        if record.get("case") == case_name:
+            return record
+    return None
+
+
+def _build_validation_rows(results, expected):
+    rows = []
+    metric_pairs = [
+        ("Temperature (°C)", "TOUT_C", "TOUT_C"),
+        ("CO (dry%)", "Y_CO_dry", "Y_CO"),
+        ("H2 (dry%)", "Y_H2_dry", "Y_H2"),
+        ("CO2 (dry%)", "Y_CO2_dry", "Y_CO2"),
+        ("CH4 (dry%)", "Y_CH4_dry", "Y_CH4"),
+    ]
+    for label, pred_key, exp_key in metric_pairs:
+        target = expected.get(exp_key)
+        pred = results.get(pred_key)
+        if target is None and label.startswith("Temperature"):
+            continue
+        rows.append(
+            {
+                "Metric": label,
+                "Model Result": pred,
+                "Paper/Target": target,
+                "Abs Error": None if target is None else abs(pred - target),
+            }
+        )
+    return pd.DataFrame(rows)
+
+
+def _render_validation_overview_tab():
+    st.subheader("19 案验证总览")
+    if not VALIDATION_SNAPSHOT:
+        st.warning("未找到验证快照，请先运行 audit 脚本生成 `generated/validation/validation_results.json`。")
+        return
+
+    summary = VALIDATION_SNAPSHOT.get("summary", {})
+    c1, c2, c3, c4 = st.columns(4)
+    c1.metric("案例数", summary.get("case_count", "-"))
+    c2.metric("平均组成误差", f"{summary.get('avg_comp_mae', 0.0):.4f}")
+    c3.metric("平均温度绝对误差", f"{summary.get('avg_temp_abs_error_C', 0.0):.4g} °C")
+    c4.metric("最终告警", f"{summary.get('avg_final_warnings', 0.0):.1f}")
+
+    if VALIDATION_SNAPSHOT_PATH:
+        st.caption(f"快照来源：`{VALIDATION_SNAPSHOT_PATH.relative_to(PROJECT_ROOT)}`")
+
+    top_problem_cases = pd.DataFrame(summary.get("top_problem_cases", []))
+    if not top_problem_cases.empty:
+        st.markdown("#### 当前最差案例")
+        st.dataframe(top_problem_cases, hide_index=True, use_container_width=True)
+
+    with st.expander("查看当前 profile 配置"):
+        st.json(VALIDATION_SNAPSHOT.get("config", {}))
+
 # --- 2. 核心逻辑封装 ---
 def run():
     """
@@ -90,70 +210,82 @@ def run():
 
     # 标题区域
     st.title("🏭 气流床气化炉平衡模型")
-    st.markdown("Thermodynamic equilibrium simulation based on Gibbs Free Energy Minimization.")
-    st.markdown("[📖 查看项目文档 (README) & 算法说明](https://github.com/dachou5224/gasifier-equilibrium-model/blob/main/README.md)")
+    st.markdown("面向 Chem Portal 子页面的 EFG 平衡模型，已对齐当前 `tuned-19cases` 验证主线。")
+    st.markdown("[📖 查看本项目 README](https://github.com/dachou5224/gasifier-equilibrium-model/blob/main/README.md)")
     
     st.divider()
 
-    tab_gas, tab_quench = st.tabs(["气化炉平衡", "激冷湿合成气"])
+    tab_gas, tab_validation, tab_quench = st.tabs(["气化炉平衡", "19案验证总览", "激冷湿合成气"])
 
     with tab_gas:
         _render_gasifier_tab()
+    with tab_validation:
+        _render_validation_overview_tab()
     with tab_quench:
         _render_quench_syngas_tab()
 
 
 def _render_gasifier_tab():
-    """主气化炉平衡模型界面（原 col_input / col_result）。"""
+    """主气化炉平衡模型界面。"""
     init_session_state()
 
     with st.expander("📖 本地中文操作手册 (使用前必读)", expanded=False):
         st.markdown("""
-        **【模型定位】**：本页面为 **全局热力学平衡模型**（基于最小 Gibbs 自由能法）。它并不关心反应需要耗时多久、管道有多长，它只推演*在无限长时间下，当前配比能达到的能量与产率极值*。非常适合做气化炉的大尺度物料衡算与理论宏观上限预估。
+        **【模型定位】**：本页面为 **全局热力学平衡模型**。当前默认采用与 19 案验证一致的 `tuned-19cases` 推荐配置，而不是旧版演示默认值。
 
         **【核心摇杆解析】**
-        *   **氧煤比 (O/C)**：控制着系统反应的底色。**调高 O/C** 会促进煤炭燃烧释放海量热能，直接拉高炉温（但会使 CO 氧化为 $CO_2$ 导致有效气下降）；**调低 O/C** 有利于保护有效气，但可能因吸热的气化反应导致热量亏空，系统死机（未转化碳激增）。
-        *   **汽煤比 (S/C)**：水蒸气的加入有助于发生水煤气变换反应（WGS：$CO+H_2O \\rightleftharpoons CO_2+H_2$），能提升产气中的氢气占比，但因为气化反应属于强吸热，过多的汽煤比会拉低全炉操作温度。
-        *   **热损估测 (%)**：气流床通常的热损约为 1%~5%（视规模而定）。如果在配置中你**不知道该怎么设**，请留在这里，然后打开下方的【🛠️ 显示高级配置】->【🛠️ 智能热量反算】，输入你的主观期望温度（如 1350°C），算法能反算出如果要维持这个温度，当前系统能承受多大的热损。
+        *   **氧煤比 (O/C)**：决定放热强度，是温度与有效气之间的第一操纵杆。
+        *   **汽煤比 (S/C)**：主要影响 H2 / CO2 / 温度之间的平衡。
+        *   **总热损 (%)**：在当前模型里拆解为“物理热损 + 模型修正项”，不再等同于单纯壁散热。
 
         **【进阶玩法建议】**
-        *   **解禁底层配置**：点击表单下方的 `[🛠️ 显示高级配置]` 可以亲自调节你那批实验煤的高低位热值、全元素分析参数以及管道入口的预热设定。
-        *   **切换弱反应器**：默认推荐 `RGibbs` 求全局最优点。但如果你觉得实际炉子温度过低，部分反应（如甲烷化）达不到理想平衡点，可以切成 `Stoic` 算法并植入温差（Approach Temp）来约束它们。
+        *   **验证工况模式**：若从 19 案模板进入，页面可自动应用当前最佳候选策略。
+        *   **自定义工况模式**：若只做工程试算，可保留推荐 profile，再手动改 O/C、S/C、压力和煤质。
         """)
 
-    # [关键修改] 使用列布局代替 Sidebar
-    # 左侧 (1.2): 参数输入区 | 右侧 (2.8): 结果展示区
     col_input, col_result = st.columns([1.2, 2.8], gap="medium")
+    case_options = ["保持当前 (Custom)"] + list(VALIDATION_CASES.keys())
 
-    # ==========================================
-    # 左侧：参数配置区域
-    # ==========================================
     with col_input:
-        st.info("🎯 **引导式操作面板 (Minimalist Mode)**")
-        
-        # 1. 验证工况加载
+        st.info("🎯 推荐默认值已切换到当前 `tuned-19cases` profile。")
+
         with st.container(border=True):
             st.markdown("#### 📂 步骤 1. 选择参考模板")
-            st.caption("建议以此为工业基准起步，大幅缩少不必要的调参。")
-            case_name = st.selectbox("选择工况:", ["保持当前 (Custom)"] + list(VALIDATION_CASES.keys()), label_visibility="collapsed")
-            
+            st.caption("优先使用 `generated/validation_cases_from_kinetic.json` 中的 19 个最新工况。")
+            case_name = st.selectbox(
+                "选择工况:",
+                case_options,
+                index=case_options.index(st.session_state.selected_validation_case)
+                if st.session_state.selected_validation_case in case_options
+                else 0,
+                label_visibility="collapsed",
+            )
+            st.session_state.selected_validation_case = case_name
+            if case_name != "保持当前 (Custom)" and st.session_state.last_case_name != case_name:
+                _apply_case_to_session(case_name)
+                st.rerun()
+            st.session_state.use_tuned_profile = st.checkbox(
+                "应用推荐 profile（Stoic + split heat loss + grouped tuning）",
+                value=bool(st.session_state.use_tuned_profile),
+            )
+            st.session_state.use_auto_strategy = st.checkbox(
+                "模板工况自动选择最佳候选策略",
+                value=bool(st.session_state.use_auto_strategy),
+                help="会在有目标值的模板工况上自动比较 heat-loss-only、O/C-first 与 char extent 候选。",
+            )
+
             if case_name != "保持当前 (Custom)" and st.button("预填该工况", type="secondary", use_container_width=True):
-                data = VALIDATION_CASES[case_name]["inputs"]
-                c_data = data["Coal Analysis"]
-                if c_data == "SAME_AS_BASE":
-                    c_data = VALIDATION_CASES["Paper_Case_6 (Base)"]["inputs"]["Coal Analysis"]
-                for k, v in c_data.items():
-                    if k in st.session_state: st.session_state[k] = v
-                p_data = data["Process Conditions"]
-                for k, v in p_data.items():
-                    if k in st.session_state: st.session_state[k] = v
-                st.success(f"已应用 {case_name}")
+                _apply_case_to_session(case_name)
+                st.success(f"已应用 {case_name} ({'推荐 profile' if st.session_state.use_tuned_profile else '原始输入'})")
                 st.rerun()
 
-        # 核心参数面板
         st.markdown("#### 🎛️ 步骤 2. 核心操纵杆")
-        st.session_state.GasifierType = st.radio("气化炉水设置", ["Dry Powder", "CWS"], 
-                                                     index=0 if st.session_state.GasifierType=="Dry Powder" else 1, horizontal=True)
+        st.session_state.GasifierType = st.radio(
+            "气化炉水设置",
+            ["Dry Powder", "CWS"],
+            index=0 if st.session_state.GasifierType == "Dry Powder" else 1,
+            horizontal=True,
+        )
         
         c_feed, c_p = st.columns(2)
         if st.session_state.GasifierType == "Dry Powder":
@@ -168,15 +300,19 @@ def _render_gasifier_tab():
         st.session_state.Ratio_OC = c3.number_input("氧煤比 (O/C)", value=float(st.session_state.Ratio_OC), format="%.3f", step=0.01)
         st.session_state.Ratio_SC = c4.number_input("汽煤比 (S/C)", value=float(st.session_state.Ratio_SC), format="%.3f", step=0.01)
         
-        st.session_state.HeatLossPercent = st.number_input("热损估测 (%)", value=float(st.session_state.HeatLossPercent), format="%.2f", step=0.5)
+        st.session_state.HeatLossPercent = st.number_input(
+            "总热损 (%)",
+            value=float(st.session_state.HeatLossPercent),
+            format="%.2f",
+            step=0.5,
+            help="在推荐 profile 下，该值表示 PhysicalHeatLossPercent + ModelCorrectionPercent 的总和。",
+        )
 
         st.markdown("---")
-        # 高级模式开关
         advanced_mode = st.toggle("🛠️ 显示高级配置 (底层煤质/反应器约束)", value=st.session_state.get('advanced_mode', False))
         st.session_state.advanced_mode = advanced_mode
 
         if advanced_mode:
-            # 2. 煤质数据
             with st.expander("🪨 详细煤质分析", expanded=True):
                 selected_db_coal = st.selectbox("从内置库填入煤", ["None"] + list(COAL_DATABASE.keys()))
                 if selected_db_coal != "None":
@@ -204,45 +340,51 @@ def _render_gasifier_tab():
                 if st.session_state.HHV_Method == 0:
                     st.session_state.HHV_Input = st.number_input("HHV (kJ/kg, Dry)", value=float(st.session_state.HHV_Input))
 
-            # 3. 其它边界条件
             with st.expander("🏭 附加管道条件", expanded=True):
                 st.session_state.TIN = st.number_input("入口 T (K)", value=float(st.session_state.TIN))
                 st.session_state.pt = st.number_input("氧纯度 (%)", value=float(st.session_state.pt))
             
-            # 4. 求解策略 (Solver)
-            with st.expander("🧮 求解策略设置", expanded=False):
-                st.session_state.SolverMethod = st.selectbox("求解算法", ["RGibbs", "Stoic"], 
-                    index=0 if st.session_state.SolverMethod=="RGibbs" else 1,
-                    help="RGibbs: 全局能量最小化\nStoic: 温差校正反应平衡")
-                
+            with st.expander("🧮 推荐 profile / Solver 设置", expanded=False):
+                st.session_state.SolverMethod = st.selectbox(
+                    "求解算法",
+                    ["RGibbs", "Stoic"],
+                    index=0 if st.session_state.SolverMethod == "RGibbs" else 1,
+                )
+                st.session_state.HeatLossMode = st.selectbox(
+                    "热损模式",
+                    ["manual", "manual_split", "effective_split_v2"],
+                    index=["manual", "manual_split", "effective_split_v2"].index(st.session_state.HeatLossMode),
+                )
+                st.session_state.CarbonConversionMode = st.selectbox(
+                    "CarbonConversionMode",
+                    ["manual", "grouped_default_v1"],
+                    index=["manual", "grouped_default_v1"].index(st.session_state.CarbonConversionMode),
+                )
+                st.session_state.DeltaTMode = st.selectbox(
+                    "DeltaTMode",
+                    ["manual", "grouped_default_v2"],
+                    index=["manual", "grouped_default_v2"].index(st.session_state.DeltaTMode),
+                )
+                st.session_state.CharExtentMode = st.selectbox(
+                    "CharExtentMode",
+                    ["explicit_v1", "correlation_v2"],
+                    index=["explicit_v1", "correlation_v2"].index(st.session_state.CharExtentMode),
+                )
                 if st.session_state.SolverMethod == "Stoic":
-                    st.info("Temperature Approach (K)")
                     sc1, sc2 = st.columns(2)
                     st.session_state.DeltaT_WGS = sc1.number_input("WGS ΔT", value=float(st.session_state.DeltaT_WGS))
                     st.session_state.DeltaT_Meth = sc2.number_input("Meth ΔT", value=float(st.session_state.DeltaT_Meth))
 
-            # 5. 智能校正
-            with st.expander("🛠️ 智能热量反算"):
+            with st.expander("🛠️ 温度校准 / 推荐策略", expanded=False):
                 st.session_state.Target_T = st.number_input("预估目标 T (°C)", value=float(st.session_state.Target_T))
                 
-                if st.button("开始校正寻找合适热损"):
-                    input_data = {
-                        k: st.session_state[k]
-                        for k in st.session_state.keys()
-                        if isinstance(k, str)
-                        and not str(k).startswith("quench_")
-                        and not str(k).startswith("last_gasifier_")
-                    }
+                if st.button("仅按目标温度反算热损", use_container_width=True):
+                    input_data = _collect_input_data_from_state()
                     try:
                         model = GasifierModel(input_data)
                         target_K = st.session_state.Target_T + 273.15
                         with st.spinner("Calibrating..."):
                             loss, _ = model.calculate_heat_loss_for_target_T(target_K)
-                            if loss < 0:
-                                st.warning(f"自热条件无法达到目标温度。强制热损置0。提议: 增大 O/C")
-                                loss = 0.0
-                            elif loss < 0.1:
-                                 st.warning(f"热损过低: {loss:.2f}%")
                             st.session_state.HeatLossPercent = loss
                             st.success(f"校正成功: 新热损 {loss:.4f}%")
                         st.rerun()
@@ -250,44 +392,54 @@ def _render_gasifier_tab():
                         st.error(f"校正失败: {e}")
 
         st.markdown("<br>", unsafe_allow_html=True)
-        # 运行按钮放在左侧栏底部
-        run_btn = st.button("🚀 开始计算 (Run)", type="primary", use_container_width=True)
+        run_btn = st.button("🚀 开始计算 / 应用最佳策略", type="primary", use_container_width=True)
 
-
-    # ==========================================
-    # 右侧：结果展示区域
-    # ==========================================
     with col_result:
         if run_btn:
-            input_data = {
-                k: st.session_state[k]
-                for k in st.session_state.keys()
-                if isinstance(k, str)
-                and not str(k).startswith("quench_")
-                and not str(k).startswith("last_gasifier_")
-            }
-            
             try:
-                model = GasifierModel(input_data)
-                with st.spinner("Solving equilibrium..."):
-                    res = model.run_simulation()
+                input_data = _collect_input_data_from_state()
+                expected = None
+                calibration_strategy = "manual_run"
+                calibration = {"calibrated_ratio_oc": None, "calibrated_heat_loss_percent": None}
 
-                # 供「激冷湿合成气」页一键填入
+                with st.spinner("Solving equilibrium..."):
+                    if case_name != "保持当前 (Custom)" and st.session_state.use_auto_strategy:
+                        expected = VALIDATION_CASES[case_name]["expected_output"]
+                        calibration_strategy, model, calibration, res, _ = select_best_validation_candidate(
+                            input_data,
+                            expected,
+                            calibrate_heat_loss=True,
+                        )
+                    else:
+                        model = GasifierModel(input_data)
+                        res = model.run_simulation()
+
                 st.session_state.last_gasifier_Vg_dry = res["Vg_dry"]
                 st.session_state.last_gasifier_TOUT_C = res["TOUT_C"]
-                st.session_state.last_gasifier_P_MPa = float(st.session_state.P)
+                st.session_state.last_gasifier_P_MPa = float(model.inputs.get("P", st.session_state.P))
                 
-                st.success("计算完成 (Calculation Complete)")
+                st.success("计算完成")
 
-                # 1. KPIs
                 st.subheader("1. 关键性能指标")
                 kpi1, kpi2, kpi3, kpi4 = st.columns(4)
                 kpi1.metric("出口温度", f"{res['TOUT_C']:.1f} °C", delta=f"{res['Heat_Err_Pct']:.3f}% Err")
                 kpi2.metric("有效气 (CO+H2)", f"{res['Y_CO_dry']+res['Y_H2_dry']:.1f} %")
                 kpi3.metric("干气流量", f"{res['Vg_dry']:.0f} Nm³/h")
                 kpi4.metric("水气比 (W/G)", f"{res['WGR_Quench']:.3f}")
-                
-                # 2. 组成
+
+                st.subheader("2. 当前求解策略")
+                s1, s2, s3, s4 = st.columns(4)
+                s1.metric("策略", calibration_strategy)
+                s2.metric("最终热损", f"{float(model.inputs.get('HeatLossPercent', 0.0)):.3f} %")
+                s3.metric("最终 O/C", f"{float(model.inputs.get('Ratio_OC', 0.0)):.4f}")
+                s4.metric("Char extent", f"{float(res.get('CharExtent', 0.0)):.4f}")
+                st.caption(
+                    f"HeatLossMode={model.inputs.get('HeatLossMode')} | "
+                    f"CarbonConversionMode={model.inputs.get('CarbonConversionMode')} | "
+                    f"DeltaTMode={model.inputs.get('DeltaTMode')} | "
+                    f"CharExtentMode={model.inputs.get('CharExtentMode')}"
+                )
+
                 st.subheader("2. 合成气组成")
                 comp_data = {
                     "组分": ["CO", "H2", "CO2", "CH4", "N2", "H2O"],
@@ -314,38 +466,49 @@ def _render_gasifier_tab():
                     fig.update_layout(margin=dict(t=0, b=0, l=0, r=0), height=220)
                     st.plotly_chart(fig, use_container_width=True)
 
-                # 3. 激冷
                 st.subheader(f"3. 激冷/水洗 (@{st.session_state.T_Scrubber}°C)")
                 st.info(f"💧 饱和湿气流量: **{res['Vg_Quench']:.1f} Nm³/h** | 水气比: **{res['WGR_Quench']:.3f}** (mol/mol)")
                 
-                # 4. 诊断
                 with st.expander("🔬 能量与元素平衡诊断"):
-                    d1, d2, d3 = st.columns(3)
+                    d1, d2, d3, d4 = st.columns(4)
                     d1.write(f"**热平衡误差:** {res['Heat_Err_Pct']:.4f}%")
                     d2.write(f"**碳平衡误差:** {res['ERR_C']:.4f}%")
                     d3.write(f"**计算 HHV:** {res['HHV']:.2f} kJ/kg")
+                    d4.write(f"**残余固碳:** {res.get('ResidualCarbonMol', 0.0):.2f} mol")
 
-                # 5. 验证
                 if case_name != "保持当前 (Custom)":
-                    st.subheader("4. 验证对比 (Validation)")
-                    tgt = VALIDATION_CASES[case_name]["expected_output"]
-                    val_data = {
-                        "Metric": ["Temperature (°C)", "CO (dry%)", "H2 (dry%)", "CO2 (dry%)"],
-                        "Model Result": [res['TOUT_C'], res['Y_CO_dry'], res['Y_H2_dry'], res['Y_CO2_dry']],
-                        "Paper/Target": [tgt.get('TOUT_C'), tgt.get('YCO'), tgt.get('YH2'), tgt.get('YCO2', 0)],
-                    }
-                    df_val = pd.DataFrame(val_data)
-                    df_val["Diff"] = df_val["Model Result"] - df_val["Paper/Target"]
-                    st.dataframe(df_val.round(2), hide_index=True)
+                    expected = expected or VALIDATION_CASES[case_name]["expected_output"]
+                    st.subheader("4. 与当前验证工况对比")
+                    st.dataframe(_build_validation_rows(res, expected).round(4), hide_index=True, use_container_width=True)
+
+                    snapshot_record = _get_snapshot_record(case_name)
+                    if snapshot_record:
+                        with st.expander("查看最近 19 案审计快照中的该案例", expanded=False):
+                            c1, c2, c3 = st.columns(3)
+                            c1.metric("快照策略", snapshot_record.get("calibration_strategy", "-"))
+                            c2.metric("快照 comp_mae", f"{float(snapshot_record.get('score', {}).get('comp_mae') or 0.0):.4f}")
+                            c3.metric("快照 O/C", f"{float(snapshot_record.get('ratio_oc_used') or 0.0):.4f}")
+                            st.json(
+                                {
+                                    "predicted": snapshot_record.get("predicted"),
+                                    "errors": snapshot_record.get("errors"),
+                                    "effective_heat_loss_percent": snapshot_record.get("effective_heat_loss_percent"),
+                                    "physical_heat_loss_percent": snapshot_record.get("physical_heat_loss_percent"),
+                                    "model_correction_percent": snapshot_record.get("model_correction_percent"),
+                                    "char_extent_used": snapshot_record.get("char_extent_used"),
+                                }
+                            )
+
+                with st.expander("查看最终输入口径", expanded=False):
+                    st.json({k: model.inputs[k] for k in sorted(model.inputs.keys()) if not str(k).startswith("quench_")})
 
             except Exception as e:
                 st.error(f"Simulation Failed: {e}")
                 st.exception(e)
 
         else:
-            # 默认状态
             st.info("👈 请在左侧配置煤质和工艺参数，然后点击 **开始计算**。")
-            st.caption("Gasifier Model v2.0 | Integrated into Chem Portal")
+            st.caption("当前页面默认对齐 `tuned-19cases` 主 profile，并优先读取最新 generated 验证工况。")
 
 
 def _render_quench_syngas_tab():

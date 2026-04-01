@@ -1,0 +1,78 @@
+name: Deploy gasifier-model to VPS
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
+    steps:
+      - name: Check required secrets
+        run: |
+          if [ -z "${{ secrets.VPS_HOST }}" ]; then
+            echo "::error::缺少 VPS_HOST。请到 Settings -> Secrets and variables -> Actions 配置。"
+            exit 1
+          fi
+          if [ -z "${{ secrets.VPS_USER }}" ]; then
+            echo "::error::缺少 VPS_USER。请到 Settings -> Secrets and variables -> Actions 配置。"
+            exit 1
+          fi
+          if [ -z "${{ secrets.VPS_KEY }}" ]; then
+            echo "::error::缺少 VPS_KEY（SSH 私钥全文）。请到 Settings -> Secrets and variables -> Actions 配置。"
+            exit 1
+          fi
+
+      - name: Pull latest code and rebuild Chem Portal
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_KEY }}
+          port: 22
+          script: |
+            set -euo pipefail
+
+            REPO_PATH="${{ secrets.VPS_REPO_PATH }}"
+            if [ -z "$REPO_PATH" ]; then
+              REPO_PATH="/root/gasifier-model"
+            fi
+
+            DEPLOY_ROOT="${{ secrets.VPS_DEPLOY_ROOT }}"
+            if [ -z "$DEPLOY_ROOT" ]; then
+              DEPLOY_ROOT="/root"
+            fi
+
+            echo "Deploy path: $REPO_PATH"
+            if [ ! -d "$REPO_PATH/.git" ]; then
+              echo "ERROR: $REPO_PATH 不是 Git 仓库目录"
+              exit 1
+            fi
+
+            cd "$REPO_PATH"
+            git fetch origin
+            git checkout main
+            git pull --ff-only origin main
+            echo "Current commit: $(git rev-parse --short HEAD)"
+
+            PORTAL_PATH="$DEPLOY_ROOT/chem_portal"
+            if [ ! -d "$PORTAL_PATH" ]; then
+              echo "ERROR: 未找到 Chem Portal 目录: $PORTAL_PATH"
+              exit 1
+            fi
+
+            cd "$PORTAL_PATH"
+            if docker compose version >/dev/null 2>&1; then
+              docker compose up -d --build
+            elif command -v docker-compose >/dev/null 2>&1; then
+              docker-compose up -d --build
+            else
+              echo "ERROR: 未找到 docker compose 或 docker-compose"
+              exit 1
+            fi
+
+            echo "✅ gasifier-model 已更新，Chem Portal 已重建"

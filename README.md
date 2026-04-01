@@ -1,103 +1,92 @@
-# Entrained Flow Gasifier Equilibrium Model (EFG-EM)
+# Entrained Flow Gasifier Equilibrium Model
 # 气流床气化炉平衡模型
 
----
+本项目用于气流床煤气化炉的热力学平衡计算，支持 `RGibbs` 与 `Stoic` 两类求解路径，并提供 19 个文献案例的批量验证、参数扫描、结果审计与简单 UI 入口。
 
-## 1. Project Overview | 项目概述
+## 项目现状
+当前验证主 profile 为 `tuned-19cases`，核心特点包括：
+- `Stoic` 求解器作为 19 案默认验证器
+- `effective_split_v2`：将总热损拆为真实热损与模型修正项
+- `grouped_default_v1` / `grouped_default_v2`：分组式 `CarbonConversion` 与 `DeltaT`
+- `correlation_v2` + 逐案 `char extent` 候选搜索
+- 对有目标温度案例执行 `heat_loss_only`、`oc_first_then_heat_loss` 与 `char_extent_search_*` 候选择优
 
-This project implements a comprehensive **thermodynamic equilibrium model** for entrained flow coal gasifiers (e.g., GE/Texaco, Shell). It predicts reactor performance, syngas composition, and quench outlet conditions based on coal properties and operating parameters.
+最新 19 案汇总结果见 `tests/validation_results.json`，当前摘要为：
+- `avg_comp_mae = 2.8440`
+- `avg_temp_abs_error_C = 9.93e-05`
+- `avg_final_warnings = 0.0`
+- `avg_candidate_failures = 0.0`
 
-本项目实现了一个完整的**热力学平衡模型**，用于气流床煤气化炉（如GE/Texaco、Shell炉型）。基于煤质特性和操作参数，预测反应器性能、合成气组成和激冷出口条件。
-
-### Key Features | 主要功能
-
-| Feature | 功能 | Description | 描述 |
-|---------|------|-------------|------|
-| **Web UI** | Web界面 | Streamlit dashboard with charts | Streamlit交互式仪表盘（已集成至Chem Portal） |
-| **Solver Strategy** | 求解策略 | **RGibbs** (Global Energy Min) or **Stoichiometric** (Temp Approach) | 可选吉布斯最小化或温差模型 |
-| **Heat Loss Tuning** | 热损自校准 | Auto-tune Heat Loss to match Target T | 自动反算热损以匹配目标温度 |
-| **Diagnostic** | 智能诊断 | Check physical validity | 负热损警告、氧煤比建议 |
-| **Thermodynamics** | 热力学 | NIST Shomate equations | NIST Shomate方程（已修正高温H2系数） |
-
----
-
-## 2. File Structure | 文件结构
-
+## 目录结构
 ```text
 gasifier-model/
-├── src/
-│   └── gasifier/          # Core model logic (Package)
-│       ├── gasifier.py    # Physics engine & Main Interface
-│       ├── stoic_solver.py# Stoichiometric Solver (Temperature Approach)
-│       ├── coal_props.py  # Coal properties & Unit conversion
-│       ├── thermo_data.py # Thermodynamic database
-│       └── validation_cases.py # Literature cases
-├── tests/                 # Validation tests
-│   ├── test_validation.py # Validation script
-│   └── test_stoic.py      # Stoic solver test
-├── debug_tools/           # Debugging scripts
-├── gasifier_ui.py         # Streamlit Web App Entry
-└── validation_results.json# Test results
+├── src/gasifier/                # 核心模型与物性/热力学/求解器
+├── scripts/                     # 审计、扫描、打印与辅助脚本
+├── tests/                       # pytest 与回归快照
+├── generated/                   # 生成结果与扫描产物
+│   ├── validation/              # 验证结果的规范落盘目录
+│   └── equilibrium_scans/       # 参数扫描结果
+├── docs/                        # 面向后续维护的说明文档
+├── gasifier_ui.py               # 现行 Streamlit UI 入口
+├── main_gui.py                  # 历史 Tk 入口，保留作 legacy 参考
+└── path_utils.py                # 早期路径辅助，保留作 legacy 参考
 ```
 
----
+## 核心文件
+- `src/gasifier/gasifier.py`：主模型、输入预处理、热损拆分、char state 与求解调度
+- `src/gasifier/stoic_solver.py`：Stoic 平衡方程与扩展反应集
+- `src/gasifier/thermo_data.py`：Shomate 热力学数据与标准态性质
+- `scripts/validation_profile.py`：当前 19 案的共享 profile 与候选选择逻辑
+- `scripts/audit_validation_cases.py`：批量审计并输出综合结果 JSON
+- `scripts/print_validation_table.py`：打印精简验证表
+- `tests/test_tuning_modes.py`：调参模式与 profile 相关测试
 
-## 3. Algorithm Details | 算法详解
-
-### 3.1 RGibbs Solver (Non-Stoichiometric)
-*   **Principle**: Minimizes total Gibbs Free Energy of the system ($G_{total} = \sum n_i \mu_i$).
-*   **Pros**: General purpose, no need to specify reaction pathways.
-*   **Cons**: Can be sensitive to initial guess and thermodynamic data accuracy.
-
-### 3.2 Temperature Approach Solver (Stoichiometric)
-*   **Principle**: Solves a system of non-linear equations based on element balances and equilibrium constants ($K_{eq}$).
-*   **Features**:
-    *   **Temperature Approach ($\Delta T$)**: Allows specifying a temperature deviation for key reactions (WGS, Methanation) to mimic non-equilibrium conditions ($K_{eq}$ calculated at $T + \Delta T$).
-    *   **Robustness**: Often more stable for specific gasifier configurations.
-
----
-
-## 4. Recent Modifications | 最近修改 (2026-01)
-
-### 4.1 Physics & Units | 物理引擎与单位修复
-> **Fix**: Standardized all internal energy units to **Joules (J)** and **Moles (mol)**. 
-> **Critical Fix**: Corrected **H2 Shomate coefficients** for high temperature (1000-2500K), resolving incorrect methanation predictions.
-
-### 4.2 Parameter Optimization | 参数调优
-> **Update**: Adjusted default **Oxygen/Coal Ratio (O/C)** from 0.86 to **1.05** to match literature validation temperatures (~1370°C).
-
-### 4.3 New Features | 新功能
-> **Feature**: Added **Stoichiometric Solver** with Temperature Approach parameters.
-> **Feature**: Added **Solver Settings** in UI to switch between RGibbs and Stoic methods.
-
-### 4.4 Equilibrium Solver Overhaul & Debugging | 平衡求解器重构与调试 (2026-03)
-> **Debug**: 移除了原先强制设定的 `co2_min` 和 `h2_min` 非物理硬约束，解放了 Gibbs 能量最小化的寻优空间。
-> **Update**: 将 Gibbs 优化算法从收敛受限的 `SLSQP` 升级为 `trust-constr` 内点法，不仅提高了稳定性，并扩充了 `typical, reducing, oxidizing, stoic_based` 等多种初值探索策略。
-> **Update**: 通过利用对数标度（log-scale），改进了 `stoic_solver.py` 中甲烷化方程在高温下的强数值跨度阻碍，消散了非物理的高温不收敛。
-> **Result**: 成功将高温下的非物理组分预测（如极高的 CO2）修正回物理真实的平衡态，并彻底排除了越界等求解假报警。
-
----
-
-## 5. Installation & Usage | 安装与使用
-
-### Method 1: Web App | 方法1：Web应用（推荐）
+## 常用命令
+启动 UI：
 ```bash
 streamlit run gasifier_ui.py
 ```
 
-### Method 2: Validation | 方法2：运行验证
+作为 `chem_portal` 子页面调试：
 ```bash
-python tests/test_validation.py
+# 目录需与 chem_portal 平级
+cd ../chem_portal
+streamlit run app.py
 ```
 
----
+运行调参模式测试：
+```bash
+python3 -m pytest tests/test_tuning_modes.py
+```
 
-## 6. License | 许可证
+运行 19 案审计：
+```bash
+python3 scripts/audit_validation_cases.py --profile tuned-19cases --output generated/validation/validation_results.json
+```
 
-This project is for research and educational purposes.
+打印验证表：
+```bash
+python3 scripts/print_validation_table.py
+```
 
+扫描平衡参数：
+```bash
+python3 scripts/scan_equilibrium_parameters.py
+```
+
+## 维护说明
+- 规范验证结果应优先写入 `generated/validation/`
+- `tests/validation_results.json` 当前保留为已跟踪快照，便于直接比较
+- 根目录 `validation_results.json` 属于历史遗留产物，后续不建议继续作为主输出
+- `main_gui.py` 与 `path_utils.py` 暂未删除，是为了避免误伤历史工作流
+- `gasifier_ui.py` 当前默认读取 `generated/validation_cases_from_kinetic.json` 与 `generated/validation/validation_results.json`
+- `chem_portal` 通过 `pages/3_Gasifier_Model.py` 动态导入 `gasifier_ui.run()`
+- 本仓库已提供 `.github/workflows/deploy-to-vps.yml`，当 `main` 更新时会拉取 `gasifier-model` 并重建 `chem_portal`，从而自动刷新门户里的该子页面
+
+## 进一步说明
+- 当前调参与目录整理说明：`docs/tuning_notes_2026-04.md`
+- 当前结构与整理建议：`docs/project_layout.md`
+- 与 `chem_portal` 的接入/自动部署说明：`docs/chem_portal_integration.md`
+
+## 许可证
 本项目仅用于研究和教育目的。
-
----
-
-*Last Updated 最后更新: 2026-01-30 v2.2*

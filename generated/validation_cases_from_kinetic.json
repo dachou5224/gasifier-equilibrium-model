@@ -1,0 +1,706 @@
+{
+  "Pilot-Slurry-fed-Coal_Water_Slurry_Western": {
+    "Coal Analysis": {
+      "Cd": 75.83,
+      "Hd": 4.58,
+      "Od": 10.89,
+      "Nd": 1.19,
+      "Sd": 0.29,
+      "Ad": 7.22,
+      "Vd": 34.96,
+      "FCd": 57.82,
+      "Mt": 14.3,
+      "HHV_Input": 30720.0
+    },
+    "Process Conditions": {
+      "FeedRate": 672.408,
+      "Ratio_OC": 0.91,
+      "Ratio_SC": 0.0,
+      "pt": 99.6,
+      "P": 2.127825,
+      "TIN": 400.0,
+      "HeatLossPercent": 2.0,
+      "SlurryConc": 66.2,
+      "GasifierType": "CWS",
+      "HHV_Method": 0
+    },
+    "expected_output": {
+      "TOUT_C": null,
+      "Y_CO": 50.71,
+      "Y_H2": 35.79,
+      "Y_CO2": 13.14,
+      "Y_CH4": 0.09
+    },
+    "expected_meta": {
+      "has_temperature": false,
+      "has_composition": true,
+      "only_components": true
+    },
+    "case_name": "Pilot-Slurry-fed-Coal_Water_Slurry_Western"
+  },
+  "Pilot-Slurry-fed-Coal_Water_Slurry_Eastern": {
+    "Coal Analysis": {
+      "Cd": 75.68,
+      "Hd": 4.12,
+      "Od": 11.12,
+      "Nd": 1.04,
+      "Sd": 0.44,
+      "Ad": 7.62,
+      "Vd": 31.6,
+      "FCd": 60.78,
+      "Mt": 14.2,
+      "HHV_Input": 29740.0
+    },
+    "Process Conditions": {
+      "FeedRate": 480.6,
+      "Ratio_OC": 0.87,
+      "Ratio_SC": 0.0,
+      "pt": 99.6,
+      "P": 2.127825,
+      "TIN": 400.0,
+      "HeatLossPercent": 2.0,
+      "SlurryConc": 55.9,
+      "GasifierType": "CWS",
+      "HHV_Method": 0
+    },
+    "expected_output": {
+      "TOUT_C": null,
+      "Y_CO": 41.55,
+      "Y_H2": 36.15,
+      "Y_CO2": 20.64,
+      "Y_CH4": 0.4
+    },
+    "expected_meta": {
+      "has_temperature": false,
+      "has_composition": true,
+      "only_components": true
+    },
+    "case_name": "Pilot-Slurry-fed-Coal_Water_Slurry_Eastern"
+  },
+  "Pilot-Dry-fed-Texaco_I-1": {
+    "Coal Analysis": {
+      "Cd": 75.83,
+      "Hd": 4.58,
+      "Od": 10.89,
+      "Nd": 1.19,
+      "Sd": 0.29,
+      "Ad": 7.22,
+      "Vd": 34.96,
+      "FCd": 57.82,
+      "Mt": 14.3,
+      "HHV_Input": 30720.0
+    },
+    "Process Conditions": {
+      "FeedRate": 276.0,
+      "Ratio_OC": 0.866,
+      "Ratio_SC": 0.241,
+      "pt": 99.6,
+      "P": 2.4318,
+      "TIN": 505.22,
+      "HeatLossPercent": 3.0,
+      "SlurryConc": 100.0,
+      "GasifierType": "Dry Powder",
+      "HHV_Method": 0
+    },
+    "expected_output": {
+      "TOUT_C": 1370.0,
+      "Y_CO": 57.57,
+      "Y_H2": 39.13,
+      "Y_CO2": 2.95,
+      "Y_CH4": 0.12
+    },
+    "expected_meta": {
+      "has_temperature": true,
+      "has_composition": true,
+      "only_components": false
+    },
+    "case_name": "Pilot-Dry-fed-Texaco_I-1"
+  },
+  "Pilot-Dry-fed-Texaco_I-2": {
+    "Coal Analysis": {
+      "Cd": 75.83,
+      "Hd": 4.58,
+      "Od": 10.89,
+      "Nd": 1.19,
+      "Sd": 0.29,
+      "Ad": 7.22,
+      "Vd": 34.96,
+      "FCd": 57.82,
+      "Mt": 14.3,
+      "HHV_Input": 30720.0
+    },
+    "Process Conditions": {
+      "FeedRate": 292.24800000000005,
+      "Ratio_OC": 0.768,
+      "Ratio_SC": 0.314,
+      "pt": 99.6,
+      "P": 2.4318,
+      "TIN": 496.33,
+      "HeatLossPercent": 3.0,
+      "SlurryConc": 100.0,
+      "GasifierType": "Dry Powder",
+      "HHV_Method": 0
+    },
+    "expected_output": {
+      "TOUT_C": 1333.0,
+      "Y_CO": 53.06,
+      "Y_H2": 41.0,
+      "Y_CO2": 5.15
+    },
+    "expected_meta": {
+      "has_temperature": true,
+      "has_composition": true,
+      "only_components": false
+    },
+    "case_name": "Pilot-Dry-fed-Texaco_I-2"
+  },
+  "Pilot-Dry-fed-Texaco_I-5C": {
+    "Coal Analysis": {
+      "Cd": 75.83,
+      "Hd": 4.58,
+      "Od": 10.89,
+      "Nd": 1.19,
+      "Sd": 0.29,
+      "Ad": 7.22,
+      "Vd": 34.96,
+      "FCd": 57.82,
+      "Mt": 14.3,
+      "HHV_Input": 30720.0
+    },
+    "Process Conditions": {
+      "FeedRate": 202.55040000000002,
+      "Ratio_OC": 0.832,
+      "Ratio_SC": 0.429,
+      "pt": 99.6,
+      "P": 2.4318,
+      "TIN": 497.44,
+      "HeatLossPercent": 3.0,
+      "SlurryConc": 100.0,
+      "GasifierType": "Dry Powder",
+      "HHV_Method": 0
+    },
+    "expected_output": {
+      "TOUT_C": null
+    },
+    "expected_meta": {
+      "has_temperature": false,
+      "has_composition": false,
+      "only_components": false
+    },
+    "case_name": "Pilot-Dry-fed-Texaco_I-5C"
+  },
+  "Pilot-Dry-fed-Texaco_I-10": {
+    "Coal Analysis": {
+      "Cd": 75.83,
+      "Hd": 4.58,
+      "Od": 10.89,
+      "Nd": 1.19,
+      "Sd": 0.29,
+      "Ad": 7.22,
+      "Vd": 34.96,
+      "FCd": 57.82,
+      "Mt": 14.3,
+      "HHV_Input": 30720.0
+    },
+    "Process Conditions": {
+      "FeedRate": 467.172,
+      "Ratio_OC": 0.8346,
+      "Ratio_SC": 0.276,
+      "pt": 99.6,
+      "P": 2.4318,
+      "TIN": 481.33,
+      "HeatLossPercent": 3.0,
+      "SlurryConc": 100.0,
+      "GasifierType": "Dry Powder",
+      "HHV_Method": 0
+    },
+    "expected_output": {
+      "TOUT_C": null,
+      "Y_CO": 55.18,
+      "Y_H2": 39.24,
+      "Y_CO2": 4.69
+    },
+    "expected_meta": {
+      "has_temperature": false,
+      "has_composition": true,
+      "only_components": true
+    },
+    "case_name": "Pilot-Dry-fed-Texaco_I-10"
+  },
+  "Pilot-Dry-fed-Texaco_Exxon": {
+    "Coal Analysis": {
+      "Cd": 75.83,
+      "Hd": 4.58,
+      "Od": 10.89,
+      "Nd": 1.19,
+      "Sd": 0.29,
+      "Ad": 7.22,
+      "Vd": 34.96,
+      "FCd": 57.82,
+      "Mt": 14.3,
+      "HHV_Input": 30720.0
+    },
+    "Process Conditions": {
+      "FeedRate": 453.996,
+      "Ratio_OC": 0.79,
+      "Ratio_SC": 0.5,
+      "pt": 99.6,
+      "P": 2.4318,
+      "TIN": 505.22,
+      "HeatLossPercent": 3.0,
+      "SlurryConc": 100.0,
+      "GasifierType": "Dry Powder",
+      "HHV_Method": 0
+    },
+    "expected_output": {
+      "TOUT_C": null,
+      "Y_CO": 51.759364358683314,
+      "Y_H2": 38.36549375709421,
+      "Y_CO2": 8.535754824063563
+    },
+    "expected_meta": {
+      "has_temperature": false,
+      "has_composition": true,
+      "only_components": true
+    },
+    "case_name": "Pilot-Dry-fed-Texaco_Exxon"
+  },
+  "Pilot-Dry-fed-texaco i-1": {
+    "Coal Analysis": {
+      "Cd": 75.83,
+      "Hd": 4.58,
+      "Od": 10.89,
+      "Nd": 1.19,
+      "Sd": 0.29,
+      "Ad": 7.22,
+      "Vd": 34.96,
+      "FCd": 57.82,
+      "Mt": 14.3,
+      "HHV_Input": 30720.0
+    },
+    "Process Conditions": {
+      "FeedRate": 76.66,
+      "Ratio_OC": 0.866,
+      "Ratio_SC": 0.241,
+      "pt": 99.6,
+      "P": 2.4318,
+      "TIN": 505.22,
+      "HeatLossPercent": 4,
+      "SlurryConc": 100.0,
+      "GasifierType": "Dry Powder",
+      "HHV_Method": 0
+    },
+    "expected_output": {
+      "TOUT_C": null
+    },
+    "expected_meta": {
+      "has_temperature": false,
+      "has_composition": false,
+      "only_components": false
+    },
+    "case_name": "Pilot-Dry-fed-texaco i-1"
+  },
+  "Pilot-Dry-fed-texaco i-2": {
+    "Coal Analysis": {
+      "Cd": 75.83,
+      "Hd": 4.58,
+      "Od": 10.89,
+      "Nd": 1.19,
+      "Sd": 0.29,
+      "Ad": 7.22,
+      "Vd": 34.96,
+      "FCd": 57.82,
+      "Mt": 14.3,
+      "HHV_Input": 30720.0
+    },
+    "Process Conditions": {
+      "FeedRate": 81.18,
+      "Ratio_OC": 0.76818,
+      "Ratio_SC": 0.314,
+      "pt": 99.6,
+      "P": 2.4318,
+      "TIN": 496.33,
+      "HeatLossPercent": 4,
+      "SlurryConc": 100.0,
+      "GasifierType": "Dry Powder",
+      "HHV_Method": 0
+    },
+    "expected_output": {
+      "TOUT_C": null
+    },
+    "expected_meta": {
+      "has_temperature": false,
+      "has_composition": false,
+      "only_components": false
+    },
+    "case_name": "Pilot-Dry-fed-texaco i-2"
+  },
+  "Pilot-Dry-fed-texaco i-5c": {
+    "Coal Analysis": {
+      "Cd": 75.83,
+      "Hd": 4.58,
+      "Od": 10.89,
+      "Nd": 1.19,
+      "Sd": 0.29,
+      "Ad": 7.22,
+      "Vd": 34.96,
+      "FCd": 57.82,
+      "Mt": 14.3,
+      "HHV_Input": 30720.0
+    },
+    "Process Conditions": {
+      "FeedRate": 56.264,
+      "Ratio_OC": 0.832,
+      "Ratio_SC": 0.429,
+      "pt": 99.6,
+      "P": 2.4318,
+      "TIN": 497.44,
+      "HeatLossPercent": 4,
+      "SlurryConc": 100.0,
+      "GasifierType": "Dry Powder",
+      "HHV_Method": 0
+    },
+    "expected_output": {
+      "TOUT_C": null
+    },
+    "expected_meta": {
+      "has_temperature": false,
+      "has_composition": false,
+      "only_components": false
+    },
+    "case_name": "Pilot-Dry-fed-texaco i-5c"
+  },
+  "Pilot-Dry-fed-texaco i-10": {
+    "Coal Analysis": {
+      "Cd": 75.83,
+      "Hd": 4.58,
+      "Od": 10.89,
+      "Nd": 1.19,
+      "Sd": 0.29,
+      "Ad": 7.22,
+      "Vd": 34.96,
+      "FCd": 57.82,
+      "Mt": 14.3,
+      "HHV_Input": 30720.0
+    },
+    "Process Conditions": {
+      "FeedRate": 129.77,
+      "Ratio_OC": 0.83457,
+      "Ratio_SC": 0.276,
+      "pt": 99.6,
+      "P": 2.4318,
+      "TIN": 481.33,
+      "HeatLossPercent": 4,
+      "SlurryConc": 100.0,
+      "GasifierType": "Dry Powder",
+      "HHV_Method": 0
+    },
+    "expected_output": {
+      "TOUT_C": null
+    },
+    "expected_meta": {
+      "has_temperature": false,
+      "has_composition": false,
+      "only_components": false
+    },
+    "case_name": "Pilot-Dry-fed-texaco i-10"
+  },
+  "Pilot-Dry-fed-texaco exxon": {
+    "Coal Analysis": {
+      "Cd": 75.83,
+      "Hd": 4.58,
+      "Od": 10.89,
+      "Nd": 1.19,
+      "Sd": 0.29,
+      "Ad": 7.22,
+      "Vd": 34.96,
+      "FCd": 57.82,
+      "Mt": 14.3,
+      "HHV_Input": 30720.0
+    },
+    "Process Conditions": {
+      "FeedRate": 126.11,
+      "Ratio_OC": 0.79,
+      "Ratio_SC": 0.5,
+      "pt": 99.6,
+      "P": 2.4318,
+      "TIN": 505.22,
+      "HeatLossPercent": 4,
+      "SlurryConc": 100.0,
+      "GasifierType": "Dry Powder",
+      "HHV_Method": 0
+    },
+    "expected_output": {
+      "TOUT_C": null
+    },
+    "expected_meta": {
+      "has_temperature": false,
+      "has_composition": false,
+      "only_components": false
+    },
+    "case_name": "Pilot-Dry-fed-texaco exxon"
+  },
+  "Pilot-Dry-fed-slurry western": {
+    "Coal Analysis": {
+      "Cd": 75.83,
+      "Hd": 4.58,
+      "Od": 10.89,
+      "Nd": 1.19,
+      "Sd": 0.29,
+      "Ad": 7.22,
+      "Vd": 34.96,
+      "FCd": 57.82,
+      "Mt": 14.3,
+      "HHV_Input": 30720.0
+    },
+    "Process Conditions": {
+      "FeedRate": 186.78,
+      "Ratio_OC": 0.91,
+      "Ratio_SC": 0.52,
+      "pt": 99.6,
+      "P": 2.4318,
+      "TIN": 400,
+      "HeatLossPercent": 4,
+      "SlurryConc": 100.0,
+      "GasifierType": "Dry Powder",
+      "HHV_Method": 0
+    },
+    "expected_output": {
+      "TOUT_C": null
+    },
+    "expected_meta": {
+      "has_temperature": false,
+      "has_composition": false,
+      "only_components": false
+    },
+    "case_name": "Pilot-Dry-fed-slurry western"
+  },
+  "Pilot-Dry-fed-slurry eastern": {
+    "Coal Analysis": {
+      "Cd": 75.68,
+      "Hd": 4.12,
+      "Od": 11.12,
+      "Nd": 1.04,
+      "Sd": 0.44,
+      "Ad": 7.62,
+      "Vd": 31.6,
+      "FCd": 60.78,
+      "Mt": 14.2,
+      "HHV_Input": 29740.0
+    },
+    "Process Conditions": {
+      "FeedRate": 133.5,
+      "Ratio_OC": 0.87,
+      "Ratio_SC": 0.79,
+      "pt": 99.6,
+      "P": 2.4318,
+      "TIN": 400,
+      "HeatLossPercent": 4,
+      "SlurryConc": 100.0,
+      "GasifierType": "Dry Powder",
+      "HHV_Method": 0
+    },
+    "expected_output": {
+      "TOUT_C": null
+    },
+    "expected_meta": {
+      "has_temperature": false,
+      "has_composition": false,
+      "only_components": false
+    },
+    "case_name": "Pilot-Dry-fed-slurry eastern"
+  },
+  "Industrial-Slurry-fed-Illinois_No6": {
+    "Coal Analysis": {
+      "Cd": 69.6,
+      "Hd": 5.3,
+      "Od": 10.0,
+      "Nd": 1.3,
+      "Sd": 3.9,
+      "Ad": 10.0,
+      "Vd": 30.0,
+      "FCd": 60.0,
+      "Mt": 0.0,
+      "HHV_Input": 29538.0
+    },
+    "Process Conditions": {
+      "FeedRate": 41670.0,
+      "Ratio_OC": 1.05,
+      "Ratio_SC": 0.0,
+      "pt": 99.6,
+      "P": 4.083,
+      "TIN": 400.0,
+      "HeatLossPercent": 1.2,
+      "SlurryConc": 66.5,
+      "GasifierType": "CWS",
+      "HHV_Method": 0
+    },
+    "expected_output": {
+      "TOUT_C": null,
+      "Y_CO": 40.8,
+      "Y_H2": 29.8,
+      "Y_CO2": 10.27,
+      "Y_CH4": 0.3
+    },
+    "expected_meta": {
+      "has_temperature": false,
+      "has_composition": true,
+      "only_components": true
+    },
+    "case_name": "Industrial-Slurry-fed-Illinois_No6"
+  },
+  "Industrial-Slurry-fed-Australia_UBE": {
+    "Coal Analysis": {
+      "Cd": 66.8,
+      "Hd": 5.0,
+      "Od": 7.3,
+      "Nd": 1.7,
+      "Sd": 4.2,
+      "Ad": 15.0,
+      "Vd": 30.0,
+      "FCd": 55.0,
+      "Mt": 0.0,
+      "HHV_Input": 28683.999999999996
+    },
+    "Process Conditions": {
+      "FeedRate": 41670.0,
+      "Ratio_OC": 0.87,
+      "Ratio_SC": 0.0,
+      "pt": 99.6,
+      "P": 4.083,
+      "TIN": 400.0,
+      "HeatLossPercent": 2.0,
+      "SlurryConc": 62.1,
+      "GasifierType": "CWS",
+      "HHV_Method": 0
+    },
+    "expected_output": {
+      "TOUT_C": null,
+      "Y_CO": 35.97,
+      "Y_H2": 29.47,
+      "Y_CO2": 12.31,
+      "Y_CH4": 0.22
+    },
+    "expected_meta": {
+      "has_temperature": false,
+      "has_composition": true,
+      "only_components": true
+    },
+    "case_name": "Industrial-Slurry-fed-Australia_UBE"
+  },
+  "Industrial-Slurry-fed-Fluid_Coke": {
+    "Coal Analysis": {
+      "Cd": 86.0,
+      "Hd": 2.0,
+      "Od": 2.3,
+      "Nd": 1.0,
+      "Sd": 8.3,
+      "Ad": 0.5,
+      "Vd": 30.0,
+      "FCd": 69.5,
+      "Mt": 0.0,
+      "HHV_Input": 32105.999999999993
+    },
+    "Process Conditions": {
+      "FeedRate": 41670.0,
+      "Ratio_OC": 1.03,
+      "Ratio_SC": 0.0,
+      "pt": 99.6,
+      "P": 4.083,
+      "TIN": 400.0,
+      "HeatLossPercent": 2.0,
+      "SlurryConc": 60.6,
+      "GasifierType": "CWS",
+      "HHV_Method": 0
+    },
+    "expected_output": {
+      "TOUT_C": null,
+      "Y_CO": 47.34,
+      "Y_H2": 24.25,
+      "Y_CO2": 13.36,
+      "Y_CH4": 0.09
+    },
+    "expected_meta": {
+      "has_temperature": false,
+      "has_composition": true,
+      "only_components": true
+    },
+    "case_name": "Industrial-Slurry-fed-Fluid_Coke"
+  },
+  "Industrial-Slurry-fed-LuNan_Texaco": {
+    "Coal Analysis": {
+      "Cd": 73.33,
+      "Hd": 3.92,
+      "Od": 12.66,
+      "Nd": 0.95,
+      "Sd": 0.25,
+      "Ad": 9.8,
+      "Vd": 31.92,
+      "FCd": 58.28,
+      "Mt": 16.2,
+      "HHV_Input": 28620.0
+    },
+    "Process Conditions": {
+      "FeedRate": 17917.0,
+      "Ratio_OC": 1.05,
+      "Ratio_SC": 0.0,
+      "pt": 99.6,
+      "P": 4.0,
+      "TIN": 400.0,
+      "HeatLossPercent": 1.2,
+      "SlurryConc": 66.0,
+      "GasifierType": "CWS",
+      "HHV_Method": 0
+    },
+    "expected_output": {
+      "TOUT_C": 1350.0,
+      "Y_CO": 48.82,
+      "Y_H2": 36.58,
+      "Y_CO2": 14.41,
+      "Y_CH4": 0.0
+    },
+    "expected_meta": {
+      "has_temperature": true,
+      "has_composition": true,
+      "only_components": false
+    },
+    "case_name": "Industrial-Slurry-fed-LuNan_Texaco"
+  },
+  "Industrial-Dry-fed-Paper_Case_6": {
+    "Coal Analysis": {
+      "Mt": 14.3,
+      "Ad": 7.22,
+      "Vd": 34.96,
+      "FCd": 57.82,
+      "Cd": 75.83,
+      "Hd": 4.58,
+      "Od": 10.89,
+      "Nd": 1.19,
+      "Sd": 0.29,
+      "HHV_d": 30720.0
+    },
+    "Process Conditions": {
+      "FeedRate": 41670.0,
+      "Ratio_OC": 1.05,
+      "Ratio_SC": 0.08,
+      "pt": 99.6,
+      "P": 4.083,
+      "TIN": 300.0,
+      "HeatLossPercent": 2.85,
+      "SlurryConc": 100.0,
+      "GasifierType": "Dry Powder",
+      "HHV_Method": 0
+    },
+    "expected_output": {
+      "TOUT_C": 1370.0,
+      "Y_CO": 61.7,
+      "Y_H2": 30.3
+    },
+    "expected_meta": {
+      "has_temperature": true,
+      "has_composition": true,
+      "only_components": false
+    },
+    "case_name": "Industrial-Dry-fed-Paper_Case_6"
+  }
+}

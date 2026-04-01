@@ -19,3 +19,4 @@ env/
 .streamlit/
 # Validation artifacts
 validation_results.json
+generated/validation/*.json

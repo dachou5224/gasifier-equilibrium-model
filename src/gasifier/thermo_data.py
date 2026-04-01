@@ -5,6 +5,7 @@ R_CONST = 8.3144626
 
 # 分子量 (g/mol 或 kg/kmol)
 MOLAR_MASS = {
+    'C': 12.011,
     'CO': 28.01,
     'H2': 2.016,
     'CO2': 44.01,
@@ -90,6 +91,22 @@ def _calculate_shomate(species, T, prop_type):
     T: 温度 (K)
     prop_type: 'H' (Enthalpy), 'S' (Entropy), 'Cp' (Heat Capacity)
     """
+    if species == 'C':
+        # 石墨/固体碳的简化标准态近似，用于 char 相关平衡常数估算。
+        # 这里采用 NIST 中常见数量级:
+        # - Hf°(298.15 K) = 0
+        # - S°(298.15 K) ≈ 5.6 J/mol/K
+        # - Cp ≈ 8.5 J/mol/K
+        # 先作为工程近似，避免在缺失 condensed-phase Shomate 参数时把 char 反应完全排除。
+        cp_c = 8.53
+        s_ref = 5.60
+        if prop_type == 'Cp':
+            return cp_c
+        if prop_type == 'H':
+            return cp_c * (T - 298.15)
+        if prop_type == 'S':
+            return s_ref + cp_c * np.log(T / 298.15)
+
     coeffs = _get_coeffs(species, T)
     if coeffs is None:
         return 0.0
@@ -103,11 +120,19 @@ def _calculate_shomate(species, T, prop_type):
         return Cp 
 
     elif prop_type == 'H':
-        # H = A*t + B*t^2/2 + C*t^3/3 + D*t^4/4 - E/t + F - H_ref (kJ/mol)
-        # NIST 计算出的是 H(T) - H(298.15) + Delta_f H(298.15)
-        # 注意：公式里的 H 项 (coeffs[7]) 对应的是 Delta_f H(298.15) 吗？
-        # NIST 定义: H - H(298) = ... + F - H. 
-        # 这里的 F 包含了生成焓信息. NIST 网站结果 H = standard enthalpy.
+        # 这里返回“绝对标准焓” H°(T) 的工程用形式，而不是纯粹的 H°-H°298.15。
+        #
+        # NIST 页面给出的 Shomate 公式是:
+        #   H° - H°298.15 = A*t + B*t^2/2 + C*t^3/3 + D*t^4/4 - E/t + F - H
+        #
+        # 其中系数里的 H 项就是物种在 298.15 K 的标准生成焓 (kJ/mol)。
+        # 本模型后续需要的是:
+        #   H°(T) = [H° - H°298.15] + ΔHf°(298.15)
+        #         = A*t + B*t^2/2 + C*t^3/3 + D*t^4/4 - E/t + F
+        #
+        # 因此这里刻意不减去 H_const。对 CO/CO2/H2O/CH4 等物种，这样返回的就是
+        # 含标准生成焓的绝对标准焓；对元素单质（H2/N2/O2），H_const=0，因此两种
+        # 写法等价。
         H_val = A*t + B*(t**2)/2 + C*(t**3)/3 + D*(t**4)/4 - E/t + F
         return H_val * 1000.0  # kJ/mol -> J/mol
 

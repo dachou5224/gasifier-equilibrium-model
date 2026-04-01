@@ -11,6 +11,7 @@ import sys
 import os
 import json
 import numpy as np
+from pathlib import Path
 
 # Add src to path (assuming script is in tests/, so ../src)
 current_dir = os.path.dirname(os.path.abspath(__file__))
@@ -20,6 +21,12 @@ if src_path not in sys.path:
     sys.path.insert(0, src_path)
 
 from gasifier.gasifier import GasifierModel
+try:
+    with open(os.path.join(project_root, "generated", "validation_cases_from_kinetic.json"), encoding="utf-8") as f:
+        GENERATED_CASES = json.load(f)
+except FileNotFoundError:
+    GENERATED_CASES = {}
+
 from gasifier.validation_cases import VALIDATION_CASES
 
 class ValidationTester:
@@ -220,9 +227,9 @@ class ValidationTester:
             
             if verbose:
                 self._print_case_summary(summary)
-            
+
             return summary
-            
+
         except Exception as e:
             error_summary = {
                 'case_name': case_name,
@@ -376,8 +383,12 @@ class ValidationTester:
         
         print("\n" + "="*70)
     
-    def export_results(self, filename='validation_results.json'):
+    def export_results(self, filename=None):
         """导出结果到JSON文件"""
+        if filename is None:
+            filename = Path(project_root) / 'generated' / 'validation' / 'validation_results.json'
+        filename = Path(filename)
+        filename.parent.mkdir(parents=True, exist_ok=True)
         # 清理numpy类型以便JSON序列化
         def convert(obj):
             if isinstance(obj, np.integer):
@@ -423,7 +434,7 @@ if __name__ == "__main__":
     # results = tester.run_all_cases(case_filter="Calibrated")
     
     # 导出结果
-    tester.export_results('validation_results.json')
+    tester.export_results()
     
     print("\n✅ 验证测试完成!")
     print("\n💡 提示:")
