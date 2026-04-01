@@ -1,0 +1,1043 @@
+{
+  "config": {
+    "profile": "tuned-19cases",
+    "solver_method": null,
+    "carbon_conversion": null,
+    "delta_t_wgs": null,
+    "delta_t_meth": null,
+    "char_extent_mode": "correlation_v2",
+    "calibrate_heat_loss": true
+  },
+  "summary": {
+    "case_count": 19,
+    "avg_temp_abs_error_C": 9.929722500601201e-05,
+    "avg_comp_mae": 2.844019352505436,
+    "avg_final_warnings": 0.0,
+    "avg_candidate_failures": 0.0,
+    "max_final_warnings": 0,
+    "cases_with_final_warnings": 0,
+    "top_problem_cases": [
+      {
+        "case": "Industrial-Slurry-fed-Illinois_No6",
+        "temp_abs": null,
+        "comp_mae": 5.641013072948355,
+        "warnings": 0
+      },
+      {
+        "case": "Industrial-Slurry-fed-Australia_UBE",
+        "temp_abs": null,
+        "comp_mae": 5.338886285206951,
+        "warnings": 0
+      },
+      {
+        "case": "Pilot-Dry-fed-Texaco_I-1",
+        "temp_abs": 3.403887603781186e-06,
+        "comp_mae": 3.6286287161211406,
+        "warnings": 0
+      },
+      {
+        "case": "Industrial-Slurry-fed-Fluid_Coke",
+        "temp_abs": null,
+        "comp_mae": 2.9357446319326,
+        "warnings": 0
+      },
+      {
+        "case": "Industrial-Slurry-fed-LuNan_Texaco",
+        "temp_abs": 1.2426726243575104e-06,
+        "comp_mae": 2.885462608693795,
+        "warnings": 0
+      },
+      {
+        "case": "Pilot-Dry-fed-Texaco_I-2",
+        "temp_abs": 0.0003911244216396881,
+        "comp_mae": 2.8194989572824087,
+        "warnings": 0
+      },
+      {
+        "case": "Pilot-Dry-fed-Texaco_I-10",
+        "temp_abs": null,
+        "comp_mae": 2.783462541635357,
+        "warnings": 0
+      },
+      {
+        "case": "Pilot-Dry-fed-Texaco_Exxon",
+        "temp_abs": null,
+        "comp_mae": 2.513720510450223,
+        "warnings": 0
+      }
+    ],
+    "gasifier_type_counts": {
+      "CWS": 6,
+      "Dry Powder": 13
+    }
+  },
+  "records": [
+    {
+      "case": "Pilot-Slurry-fed-Coal_Water_Slurry_Western",
+      "calibration_strategy": "char_extent_search_0.999",
+      "gasifier_type": "CWS",
+      "carbon_conversion": null,
+      "char_extent_mode": "correlation_v2",
+      "char_extent_used": 0.999,
+      "residual_carbon_mol": 28.10300432909935,
+      "ratio_oc_input": 0.91,
+      "ratio_oc_used": 0.91,
+      "effective_heat_loss_percent": 2.0,
+      "physical_heat_loss_percent": 2.5,
+      "model_correction_percent": -0.5,
+      "calibrated_ratio_oc": null,
+      "calibrated_heat_loss_percent": null,
+      "expected": {
+        "TOUT_C": null,
+        "Y_CO": 50.71,
+        "Y_H2": 35.79,
+        "Y_CO2": 13.14,
+        "Y_CH4": 0.09
+      },
+      "predicted": {
+        "TOUT_C": 1129.388218079749,
+        "Y_CO": 50.81452344553284,
+        "Y_H2": 35.455671845319536,
+        "Y_CO2": 13.053894791895429,
+        "Y_CH4": 0.03847409001365595
+      },
+      "errors": {
+        "Y_CO_error": 0.10452344553284121,
+        "Y_H2_error": -0.3343281546804633,
+        "Y_CO2_error": -0.08610520810457167,
+        "Y_CH4_error": -0.05152590998634405
+      },
+      "diagnostics": {
+        "total_warnings": 0,
+        "mass_balance_issues": 0,
+        "constraint_violations": 0,
+        "details": {
+          "convergence_warnings": [],
+          "candidate_failures": [],
+          "mass_balance_errors": [],
+          "constraint_violations": []
+        }
+      },
+      "score": {
+        "temp_abs": null,
+        "comp_mae": 0.1749856027726254,
+        "warnings": 0,
+        "candidate_failures": 0,
+        "mass_issues": 0,
+        "constraints": 0
+      }
+    },
+    {
+      "case": "Pilot-Slurry-fed-Coal_Water_Slurry_Eastern",
+      "calibration_strategy": "char_extent_search_0.999",
+      "gasifier_type": "CWS",
+      "carbon_conversion": null,
+      "char_extent_mode": "correlation_v2",
+      "char_extent_used": 0.999,
+      "residual_carbon_mol": 16.927683516776597,
+      "ratio_oc_input": 0.87,
+      "ratio_oc_used": 0.87,
+      "effective_heat_loss_percent": 2.0,
+      "physical_heat_loss_percent": 2.5,
+      "model_correction_percent": -0.5,
+      "calibrated_ratio_oc": null,
+      "calibrated_heat_loss_percent": null,
+      "expected": {
+        "TOUT_C": null,
+        "Y_CO": 41.55,
+        "Y_H2": 36.15,
+        "Y_CO2": 20.64,
+        "Y_CH4": 0.4
+      },
+      "predicted": {
+        "TOUT_C": 869.5527366234925,
+        "Y_CO": 40.18113921818484,
+        "Y_H2": 36.639619710175545,
+        "Y_CO2": 20.57046736836278,
+        "Y_CH4": 1.9933869500632941
+      },
+      "errors": {
+        "Y_CO_error": -1.3688607818151581,
+        "Y_H2_error": 0.4896197101755462,
+        "Y_CO2_error": -0.06953263163721957,
+        "Y_CH4_error": 1.593386950063294
+      },
+      "diagnostics": {
+        "total_warnings": 0,
+        "mass_balance_issues": 0,
+        "constraint_violations": 0,
+        "details": {
+          "convergence_warnings": [],
+          "candidate_failures": [],
+          "mass_balance_errors": [],
+          "constraint_violations": []
+        }
+      },
+      "score": {
+        "temp_abs": null,
+        "comp_mae": 0.642671041209308,
+        "warnings": 0,
+        "candidate_failures": 0,
+        "mass_issues": 0,
+        "constraints": 0
+      }
+    },
+    {
+      "case": "Pilot-Dry-fed-Texaco_I-1",
+      "calibration_strategy": "char_extent_search_0.999",
+      "gasifier_type": "Dry Powder",
+      "carbon_conversion": null,
+      "char_extent_mode": "correlation_v2",
+      "char_extent_used": 0.999,
+      "residual_carbon_mol": 17.424927150113945,
+      "ratio_oc_input": 0.866,
+      "ratio_oc_used": 0.866,
+      "effective_heat_loss_percent": 2.9171909337895805,
+      "physical_heat_loss_percent": 4.0,
+      "model_correction_percent": -1.0828090662104195,
+      "calibrated_ratio_oc": null,
+      "calibrated_heat_loss_percent": 2.9171909337895805,
+      "expected": {
+        "TOUT_C": 1370.0,
+        "Y_CO": 57.57,
+        "Y_H2": 39.13,
+        "Y_CO2": 2.95,
+        "Y_CH4": 0.12
+      },
+      "predicted": {
+        "TOUT_C": 1370.0000034038876,
+        "Y_CO": 58.30643508709095,
+        "Y_H2": 33.53351204698942,
+        "Y_CO2": 7.502963108261897,
+        "Y_CH4": 0.006356742353522627
+      },
+      "errors": {
+        "T_error_C": 3.403887603781186e-06,
+        "Y_CO_error": 0.7364350870909462,
+        "Y_H2_error": -5.59648795301058,
+        "Y_CO2_error": 4.552963108261896,
+        "Y_CH4_error": -0.11364325764647737
+      },
+      "diagnostics": {
+        "total_warnings": 0,
+        "mass_balance_issues": 0,
+        "constraint_violations": 0,
+        "details": {
+          "convergence_warnings": [],
+          "candidate_failures": [],
+          "mass_balance_errors": [],
+          "constraint_violations": []
+        }
+      },
+      "score": {
+        "temp_abs": 3.403887603781186e-06,
+        "comp_mae": 3.6286287161211406,
+        "warnings": 0,
+        "candidate_failures": 0,
+        "mass_issues": 0,
+        "constraints": 0
+      }
+    },
+    {
+      "case": "Pilot-Dry-fed-Texaco_I-2",
+      "calibration_strategy": "char_extent_search_0.999",
+      "gasifier_type": "Dry Powder",
+      "carbon_conversion": null,
+      "char_extent_mode": "correlation_v2",
+      "char_extent_used": 0.999,
+      "residual_carbon_mol": 18.450725035385403,
+      "ratio_oc_input": 0.768,
+      "ratio_oc_used": 0.768,
+      "effective_heat_loss_percent": -1.926119301457792,
+      "physical_heat_loss_percent": 4.0,
+      "model_correction_percent": -5.926119301457792,
+      "calibrated_ratio_oc": null,
+      "calibrated_heat_loss_percent": -1.926119301457792,
+      "expected": {
+        "TOUT_C": 1333.0,
+        "Y_CO": 53.06,
+        "Y_H2": 41.0,
+        "Y_CO2": 5.15
+      },
+      "predicted": {
+        "TOUT_C": 1332.9996088755784,
+        "Y_CO": 56.43114185911896,
+        "Y_H2": 36.85563532358935,
+        "Y_CO2": 6.092990336317616,
+        "Y_CH4": 0.014058882303708402
+      },
+      "errors": {
+        "T_error_C": -0.0003911244216396881,
+        "Y_CO_error": 3.371141859118957,
+        "Y_H2_error": -4.144364676410653,
+        "Y_CO2_error": 0.9429903363176155
+      },
+      "diagnostics": {
+        "total_warnings": 0,
+        "mass_balance_issues": 0,
+        "constraint_violations": 0,
+        "details": {
+          "convergence_warnings": [],
+          "candidate_failures": [],
+          "mass_balance_errors": [],
+          "constraint_violations": []
+        }
+      },
+      "score": {
+        "temp_abs": 0.0003911244216396881,
+        "comp_mae": 2.8194989572824087,
+        "warnings": 0,
+        "candidate_failures": 0,
+        "mass_issues": 0,
+        "constraints": 0
+      }
+    },
+    {
+      "case": "Pilot-Dry-fed-Texaco_I-5C",
+      "calibration_strategy": "heat_loss_only",
+      "gasifier_type": "Dry Powder",
+      "carbon_conversion": null,
+      "char_extent_mode": "correlation_v2",
+      "char_extent_used": 0.990496,
+      "residual_carbon_mol": 121.53501581161254,
+      "ratio_oc_input": 0.832,
+      "ratio_oc_used": 0.832,
+      "effective_heat_loss_percent": 3.0,
+      "physical_heat_loss_percent": 4.0,
+      "model_correction_percent": -1.0,
+      "calibrated_ratio_oc": null,
+      "calibrated_heat_loss_percent": null,
+      "expected": {
+        "TOUT_C": null
+      },
+      "predicted": {
+        "TOUT_C": 1188.1802503807016,
+        "Y_CO": 51.67392227456721,
+        "Y_H2": 37.00978544700374,
+        "Y_CO2": 10.657496258283494,
+        "Y_CH4": 0.04105383764965387
+      },
+      "errors": {},
+      "diagnostics": {
+        "total_warnings": 0,
+        "mass_balance_issues": 0,
+        "constraint_violations": 0,
+        "details": {
+          "convergence_warnings": [],
+          "candidate_failures": [],
+          "mass_balance_errors": [],
+          "constraint_violations": []
+        }
+      },
+      "score": {
+        "temp_abs": null,
+        "comp_mae": null,
+        "warnings": 0,
+        "candidate_failures": 0,
+        "mass_issues": 0,
+        "constraints": 0
+      }
+    },
+    {
+      "case": "Pilot-Dry-fed-Texaco_I-10",
+      "calibration_strategy": "char_extent_search_0.999",
+      "gasifier_type": "Dry Powder",
+      "carbon_conversion": null,
+      "char_extent_mode": "correlation_v2",
+      "char_extent_used": 0.999,
+      "residual_carbon_mol": 29.49434082091466,
+      "ratio_oc_input": 0.8346,
+      "ratio_oc_used": 0.8346,
+      "effective_heat_loss_percent": 3.0,
+      "physical_heat_loss_percent": 4.0,
+      "model_correction_percent": -1.0,
+      "calibrated_ratio_oc": null,
+      "calibrated_heat_loss_percent": null,
+      "expected": {
+        "TOUT_C": null,
+        "Y_CO": 55.18,
+        "Y_H2": 39.24,
+        "Y_CO2": 4.69
+      },
+      "predicted": {
+        "TOUT_C": 1230.8854133745112,
+        "Y_CO": 56.270577308507505,
+        "Y_H2": 35.176523722952815,
+        "Y_CO2": 7.88633403935138,
+        "Y_CH4": 0.03587562203082482
+      },
+      "errors": {
+        "Y_CO_error": 1.0905773085075054,
+        "Y_H2_error": -4.063476277047187,
+        "Y_CO2_error": 3.1963340393513793
+      },
+      "diagnostics": {
+        "total_warnings": 0,
+        "mass_balance_issues": 0,
+        "constraint_violations": 0,
+        "details": {
+          "convergence_warnings": [],
+          "candidate_failures": [],
+          "mass_balance_errors": [],
+          "constraint_violations": []
+        }
+      },
+      "score": {
+        "temp_abs": null,
+        "comp_mae": 2.783462541635357,
+        "warnings": 0,
+        "candidate_failures": 0,
+        "mass_issues": 0,
+        "constraints": 0
+      }
+    },
+    {
+      "case": "Pilot-Dry-fed-Texaco_Exxon",
+      "calibration_strategy": "char_extent_search_0.999",
+      "gasifier_type": "Dry Powder",
+      "carbon_conversion": null,
+      "char_extent_mode": "correlation_v2",
+      "char_extent_used": 0.999,
+      "residual_carbon_mol": 28.662489950878808,
+      "ratio_oc_input": 0.79,
+      "ratio_oc_used": 0.79,
+      "effective_heat_loss_percent": 3.0,
+      "physical_heat_loss_percent": 4.0,
+      "model_correction_percent": -1.0,
+      "calibrated_ratio_oc": null,
+      "calibrated_heat_loss_percent": null,
+      "expected": {
+        "TOUT_C": null,
+        "Y_CO": 51.759364358683314,
+        "Y_H2": 38.36549375709421,
+        "Y_CO2": 8.535754824063563
+      },
+      "predicted": {
+        "TOUT_C": 1038.0715507163222,
+        "Y_CO": 48.15569032869425,
+        "Y_H2": 39.01262743267638,
+        "Y_CO2": 11.826108649842991,
+        "Y_CH4": 0.4174969633149149
+      },
+      "errors": {
+        "Y_CO_error": -3.6036740299890653,
+        "Y_H2_error": 0.6471336755821753,
+        "Y_CO2_error": 3.2903538257794285
+      },
+      "diagnostics": {
+        "total_warnings": 0,
+        "mass_balance_issues": 0,
+        "constraint_violations": 0,
+        "details": {
+          "convergence_warnings": [],
+          "candidate_failures": [],
+          "mass_balance_errors": [],
+          "constraint_violations": []
+        }
+      },
+      "score": {
+        "temp_abs": null,
+        "comp_mae": 2.513720510450223,
+        "warnings": 0,
+        "candidate_failures": 0,
+        "mass_issues": 0,
+        "constraints": 0
+      }
+    },
+    {
+      "case": "Pilot-Dry-fed-texaco i-1",
+      "calibration_strategy": "heat_loss_only",
+      "gasifier_type": "Dry Powder",
+      "carbon_conversion": null,
+      "char_extent_mode": "correlation_v2",
+      "char_extent_used": 0.990496,
+      "residual_carbon_mol": 45.99780751910748,
+      "ratio_oc_input": 0.866,
+      "ratio_oc_used": 0.866,
+      "effective_heat_loss_percent": 3.0,
+      "physical_heat_loss_percent": 4.0,
+      "model_correction_percent": -1.0,
+      "calibrated_ratio_oc": null,
+      "calibrated_heat_loss_percent": null,
+      "expected": {
+        "TOUT_C": null
+      },
+      "predicted": {
+        "TOUT_C": 1385.4875143977874,
+        "Y_CO": 58.22502380102499,
+        "Y_H2": 33.422983601692586,
+        "Y_CO2": 7.6895318302348565,
+        "Y_CH4": 0.005104266704039924
+      },
+      "errors": {},
+      "diagnostics": {
+        "total_warnings": 0,
+        "mass_balance_issues": 0,
+        "constraint_violations": 0,
+        "details": {
+          "convergence_warnings": [],
+          "candidate_failures": [],
+          "mass_balance_errors": [],
+          "constraint_violations": []
+        }
+      },
+      "score": {
+        "temp_abs": null,
+        "comp_mae": null,
+        "warnings": 0,
+        "candidate_failures": 0,
+        "mass_issues": 0,
+        "constraints": 0
+      }
+    },
+    {
+      "case": "Pilot-Dry-fed-texaco i-2",
+      "calibration_strategy": "heat_loss_only",
+      "gasifier_type": "Dry Powder",
+      "carbon_conversion": null,
+      "char_extent_mode": "correlation_v2",
+      "char_extent_used": 0.990496,
+      "residual_carbon_mol": 48.70991409341423,
+      "ratio_oc_input": 0.76818,
+      "ratio_oc_used": 0.76818,
+      "effective_heat_loss_percent": 3.0,
+      "physical_heat_loss_percent": 4.0,
+      "model_correction_percent": -1.0,
+      "calibrated_ratio_oc": null,
+      "calibrated_heat_loss_percent": null,
+      "expected": {
+        "TOUT_C": null
+      },
+      "predicted": {
+        "TOUT_C": 1042.0598009109467,
+        "Y_CO": 53.14481987384123,
+        "Y_H2": 37.02401503889894,
+        "Y_CO2": 8.56277931593047,
+        "Y_CH4": 0.6586657447993757
+      },
+      "errors": {},
+      "diagnostics": {
+        "total_warnings": 0,
+        "mass_balance_issues": 0,
+        "constraint_violations": 0,
+        "details": {
+          "convergence_warnings": [],
+          "candidate_failures": [],
+          "mass_balance_errors": [],
+          "constraint_violations": []
+        }
+      },
+      "score": {
+        "temp_abs": null,
+        "comp_mae": null,
+        "warnings": 0,
+        "candidate_failures": 0,
+        "mass_issues": 0,
+        "constraints": 0
+      }
+    },
+    {
+      "case": "Pilot-Dry-fed-texaco i-5c",
+      "calibration_strategy": "heat_loss_only",
+      "gasifier_type": "Dry Powder",
+      "carbon_conversion": null,
+      "char_extent_mode": "correlation_v2",
+      "char_extent_used": 0.990496,
+      "residual_carbon_mol": 33.759726614336614,
+      "ratio_oc_input": 0.832,
+      "ratio_oc_used": 0.832,
+      "effective_heat_loss_percent": 3.0,
+      "physical_heat_loss_percent": 4.0,
+      "model_correction_percent": -1.0,
+      "calibrated_ratio_oc": null,
+      "calibrated_heat_loss_percent": null,
+      "expected": {
+        "TOUT_C": null
+      },
+      "predicted": {
+        "TOUT_C": 1188.1802503807012,
+        "Y_CO": 51.67392227456729,
+        "Y_H2": 37.009785447003715,
+        "Y_CO2": 10.657496258283448,
+        "Y_CH4": 0.041053837649654285
+      },
+      "errors": {},
+      "diagnostics": {
+        "total_warnings": 0,
+        "mass_balance_issues": 0,
+        "constraint_violations": 0,
+        "details": {
+          "convergence_warnings": [],
+          "candidate_failures": [],
+          "mass_balance_errors": [],
+          "constraint_violations": []
+        }
+      },
+      "score": {
+        "temp_abs": null,
+        "comp_mae": null,
+        "warnings": 0,
+        "candidate_failures": 0,
+        "mass_issues": 0,
+        "constraints": 0
+      }
+    },
+    {
+      "case": "Pilot-Dry-fed-texaco i-10",
+      "calibration_strategy": "heat_loss_only",
+      "gasifier_type": "Dry Powder",
+      "carbon_conversion": null,
+      "char_extent_mode": "correlation_v2",
+      "char_extent_used": 0.990496,
+      "residual_carbon_mol": 77.8650597672131,
+      "ratio_oc_input": 0.83457,
+      "ratio_oc_used": 0.83457,
+      "effective_heat_loss_percent": 3.0,
+      "physical_heat_loss_percent": 4.0,
+      "model_correction_percent": -1.0,
+      "calibrated_ratio_oc": null,
+      "calibrated_heat_loss_percent": null,
+      "expected": {
+        "TOUT_C": null
+      },
+      "predicted": {
+        "TOUT_C": 1251.2443962571238,
+        "Y_CO": 56.24319133375991,
+        "Y_H2": 35.070222375928914,
+        "Y_CO2": 8.023188792294881,
+        "Y_CH4": 0.026306874575558095
+      },
+      "errors": {},
+      "diagnostics": {
+        "total_warnings": 0,
+        "mass_balance_issues": 0,
+        "constraint_violations": 0,
+        "details": {
+          "convergence_warnings": [],
+          "candidate_failures": [],
+          "mass_balance_errors": [],
+          "constraint_violations": []
+        }
+      },
+      "score": {
+        "temp_abs": null,
+        "comp_mae": null,
+        "warnings": 0,
+        "candidate_failures": 0,
+        "mass_issues": 0,
+        "constraints": 0
+      }
+    },
+    {
+      "case": "Pilot-Dry-fed-texaco exxon",
+      "calibration_strategy": "heat_loss_only",
+      "gasifier_type": "Dry Powder",
+      "carbon_conversion": null,
+      "char_extent_mode": "correlation_v2",
+      "char_extent_used": 0.990496,
+      "residual_carbon_mol": 75.66897347031863,
+      "ratio_oc_input": 0.79,
+      "ratio_oc_used": 0.79,
+      "effective_heat_loss_percent": 3.0,
+      "physical_heat_loss_percent": 4.0,
+      "model_correction_percent": -1.0,
+      "calibrated_ratio_oc": null,
+      "calibrated_heat_loss_percent": null,
+      "expected": {
+        "TOUT_C": null
+      },
+      "predicted": {
+        "TOUT_C": 1051.019454693649,
+        "Y_CO": 48.15249203565703,
+        "Y_H2": 39.04743823698216,
+        "Y_CO2": 11.880811745881296,
+        "Y_CH4": 0.3265196250898521
+      },
+      "errors": {},
+      "diagnostics": {
+        "total_warnings": 0,
+        "mass_balance_issues": 0,
+        "constraint_violations": 0,
+        "details": {
+          "convergence_warnings": [],
+          "candidate_failures": [],
+          "mass_balance_errors": [],
+          "constraint_violations": []
+        }
+      },
+      "score": {
+        "temp_abs": null,
+        "comp_mae": null,
+        "warnings": 0,
+        "candidate_failures": 0,
+        "mass_issues": 0,
+        "constraints": 0
+      }
+    },
+    {
+      "case": "Pilot-Dry-fed-slurry western",
+      "calibration_strategy": "heat_loss_only",
+      "gasifier_type": "Dry Powder",
+      "carbon_conversion": null,
+      "char_extent_mode": "correlation_v2",
+      "char_extent_used": 0.990496,
+      "residual_carbon_mol": 112.07240397102578,
+      "ratio_oc_input": 0.91,
+      "ratio_oc_used": 0.91,
+      "effective_heat_loss_percent": 3.0,
+      "physical_heat_loss_percent": 4.0,
+      "model_correction_percent": -1.0,
+      "calibrated_ratio_oc": null,
+      "calibrated_heat_loss_percent": null,
+      "expected": {
+        "TOUT_C": null
+      },
+      "predicted": {
+        "TOUT_C": 1351.3377296787326,
+        "Y_CO": 51.35381742652182,
+        "Y_H2": 35.129716655985355,
+        "Y_CO2": 12.867240598000599,
+        "Y_CH4": 0.003124362875839102
+      },
+      "errors": {},
+      "diagnostics": {
+        "total_warnings": 0,
+        "mass_balance_issues": 0,
+        "constraint_violations": 0,
+        "details": {
+          "convergence_warnings": [],
+          "candidate_failures": [],
+          "mass_balance_errors": [],
+          "constraint_violations": []
+        }
+      },
+      "score": {
+        "temp_abs": null,
+        "comp_mae": null,
+        "warnings": 0,
+        "candidate_failures": 0,
+        "mass_issues": 0,
+        "constraints": 0
+      }
+    },
+    {
+      "case": "Pilot-Dry-fed-slurry eastern",
+      "calibration_strategy": "heat_loss_only",
+      "gasifier_type": "Dry Powder",
+      "carbon_conversion": null,
+      "char_extent_mode": "correlation_v2",
+      "char_extent_used": 0.99016,
+      "residual_carbon_mol": 82.77102256265061,
+      "ratio_oc_input": 0.87,
+      "ratio_oc_used": 0.87,
+      "effective_heat_loss_percent": 3.0,
+      "physical_heat_loss_percent": 4.0,
+      "model_correction_percent": -1.0,
+      "calibrated_ratio_oc": null,
+      "calibrated_heat_loss_percent": null,
+      "expected": {
+        "TOUT_C": null
+      },
+      "predicted": {
+        "TOUT_C": 1120.6768850241747,
+        "Y_CO": 43.422373230972184,
+        "Y_H2": 38.43714701257693,
+        "Y_CO2": 17.495012203375186,
+        "Y_CH4": 0.042252767212059686
+      },
+      "errors": {},
+      "diagnostics": {
+        "total_warnings": 0,
+        "mass_balance_issues": 0,
+        "constraint_violations": 0,
+        "details": {
+          "convergence_warnings": [],
+          "candidate_failures": [],
+          "mass_balance_errors": [],
+          "constraint_violations": []
+        }
+      },
+      "score": {
+        "temp_abs": null,
+        "comp_mae": null,
+        "warnings": 0,
+        "candidate_failures": 0,
+        "mass_issues": 0,
+        "constraints": 0
+      }
+    },
+    {
+      "case": "Industrial-Slurry-fed-Illinois_No6",
+      "calibration_strategy": "char_extent_search_0.96",
+      "gasifier_type": "CWS",
+      "carbon_conversion": null,
+      "char_extent_mode": "correlation_v2",
+      "char_extent_used": 0.96,
+      "residual_carbon_mol": 64229.598867704626,
+      "ratio_oc_input": 1.05,
+      "ratio_oc_used": 1.05,
+      "effective_heat_loss_percent": 10.0,
+      "physical_heat_loss_percent": 1.0,
+      "model_correction_percent": 9.0,
+      "calibrated_ratio_oc": null,
+      "calibrated_heat_loss_percent": null,
+      "expected": {
+        "TOUT_C": null,
+        "Y_CO": 40.8,
+        "Y_H2": 29.8,
+        "Y_CO2": 10.27,
+        "Y_CH4": 0.3
+      },
+      "predicted": {
+        "TOUT_C": 1357.3976408836902,
+        "Y_CO": 49.339165104609314,
+        "Y_H2": 29.79338736438264,
+        "Y_CO2": 18.647261478618386,
+        "Y_CH4": 0.003333805480082806
+      },
+      "errors": {
+        "Y_CO_error": 8.539165104609317,
+        "Y_H2_error": -0.006612635617361917,
+        "Y_CO2_error": 8.377261478618387,
+        "Y_CH4_error": -0.29666619451991716
+      },
+      "diagnostics": {
+        "total_warnings": 0,
+        "mass_balance_issues": 0,
+        "constraint_violations": 0,
+        "details": {
+          "convergence_warnings": [],
+          "candidate_failures": [],
+          "mass_balance_errors": [],
+          "constraint_violations": []
+        }
+      },
+      "score": {
+        "temp_abs": null,
+        "comp_mae": 5.641013072948355,
+        "warnings": 0,
+        "candidate_failures": 0,
+        "mass_issues": 0,
+        "constraints": 0
+      }
+    },
+    {
+      "case": "Industrial-Slurry-fed-Australia_UBE",
+      "calibration_strategy": "char_extent_search_0.999",
+      "gasifier_type": "CWS",
+      "carbon_conversion": null,
+      "char_extent_mode": "correlation_v2",
+      "char_extent_used": 0.999,
+      "residual_carbon_mol": 1439.1709899259731,
+      "ratio_oc_input": 0.87,
+      "ratio_oc_used": 0.87,
+      "effective_heat_loss_percent": 10.0,
+      "physical_heat_loss_percent": 1.0,
+      "model_correction_percent": 9.0,
+      "calibrated_ratio_oc": null,
+      "calibrated_heat_loss_percent": null,
+      "expected": {
+        "TOUT_C": null,
+        "Y_CO": 35.97,
+        "Y_H2": 29.47,
+        "Y_CO2": 12.31,
+        "Y_CH4": 0.22
+      },
+      "predicted": {
+        "TOUT_C": 905.0006242710868,
+        "Y_CO": 38.22966319120235,
+        "Y_H2": 33.66786371108358,
+        "Y_CO2": 21.86913195333493,
+        "Y_CH4": 3.8973262827171546
+      },
+      "errors": {
+        "Y_CO_error": 2.2596631912023497,
+        "Y_H2_error": 4.197863711083578,
+        "Y_CO2_error": 9.559131953334928,
+        "Y_CH4_error": 3.6773262827171544
+      },
+      "diagnostics": {
+        "total_warnings": 0,
+        "mass_balance_issues": 0,
+        "constraint_violations": 0,
+        "details": {
+          "convergence_warnings": [],
+          "candidate_failures": [],
+          "mass_balance_errors": [],
+          "constraint_violations": []
+        }
+      },
+      "score": {
+        "temp_abs": null,
+        "comp_mae": 5.338886285206951,
+        "warnings": 0,
+        "candidate_failures": 0,
+        "mass_issues": 0,
+        "constraints": 0
+      }
+    },
+    {
+      "case": "Industrial-Slurry-fed-Fluid_Coke",
+      "calibration_strategy": "char_extent_search_0.999",
+      "gasifier_type": "CWS",
+      "carbon_conversion": null,
+      "char_extent_mode": "correlation_v2",
+      "char_extent_used": 0.999,
+      "residual_carbon_mol": 1808.0707018566318,
+      "ratio_oc_input": 1.03,
+      "ratio_oc_used": 1.03,
+      "effective_heat_loss_percent": 10.0,
+      "physical_heat_loss_percent": 1.0,
+      "model_correction_percent": 9.0,
+      "calibrated_ratio_oc": null,
+      "calibrated_heat_loss_percent": null,
+      "expected": {
+        "TOUT_C": null,
+        "Y_CO": 47.34,
+        "Y_H2": 24.25,
+        "Y_CO2": 13.36,
+        "Y_CH4": 0.09
+      },
+      "predicted": {
+        "TOUT_C": 920.7457497672414,
+        "Y_CO": 49.1241053711712,
+        "Y_H2": 24.43228800840673,
+        "Y_CO2": 20.200840516219877,
+        "Y_CH4": 3.122965228036735
+      },
+      "errors": {
+        "Y_CO_error": 1.7841053711711936,
+        "Y_H2_error": 0.18228800840672932,
+        "Y_CO2_error": 6.8408405162198775,
+        "Y_CH4_error": 3.032965228036735
+      },
+      "diagnostics": {
+        "total_warnings": 0,
+        "mass_balance_issues": 0,
+        "constraint_violations": 0,
+        "details": {
+          "convergence_warnings": [],
+          "candidate_failures": [],
+          "mass_balance_errors": [],
+          "constraint_violations": []
+        }
+      },
+      "score": {
+        "temp_abs": null,
+        "comp_mae": 2.9357446319326,
+        "warnings": 0,
+        "candidate_failures": 0,
+        "mass_issues": 0,
+        "constraints": 0
+      }
+    },
+    {
+      "case": "Industrial-Slurry-fed-LuNan_Texaco",
+      "calibration_strategy": "oc_first_then_heat_loss",
+      "gasifier_type": "CWS",
+      "carbon_conversion": null,
+      "char_extent_mode": "correlation_v2",
+      "char_extent_used": 0.990192,
+      "residual_carbon_mol": 7080.96103283728,
+      "ratio_oc_input": 1.05,
+      "ratio_oc_used": 0.9369897616230352,
+      "effective_heat_loss_percent": 0.9999992092135902,
+      "physical_heat_loss_percent": 1.0,
+      "model_correction_percent": -7.907864097989048e-07,
+      "calibrated_ratio_oc": 0.9369897616230352,
+      "calibrated_heat_loss_percent": 0.9999992092135902,
+      "expected": {
+        "TOUT_C": 1350.0,
+        "Y_CO": 48.82,
+        "Y_H2": 36.58,
+        "Y_CO2": 14.41,
+        "Y_CH4": 0.0
+      },
+      "predicted": {
+        "TOUT_C": 1350.0000012426726,
+        "Y_CO": 50.39587528209171,
+        "Y_H2": 32.04676044382787,
+        "Y_CO2": 16.95727298781755,
+        "Y_CH4": 0.004756557121612611
+      },
+      "errors": {
+        "T_error_C": 1.2426726243575104e-06,
+        "Y_CO_error": 1.5758752820917081,
+        "Y_H2_error": -4.533239556172127,
+        "Y_CO2_error": 2.54727298781755,
+        "Y_CH4_error": 0.004756557121612611
+      },
+      "diagnostics": {
+        "total_warnings": 0,
+        "mass_balance_issues": 0,
+        "constraint_violations": 0,
+        "details": {
+          "convergence_warnings": [],
+          "candidate_failures": [],
+          "mass_balance_errors": [],
+          "constraint_violations": []
+        }
+      },
+      "score": {
+        "temp_abs": 1.2426726243575104e-06,
+        "comp_mae": 2.885462608693795,
+        "warnings": 0,
+        "candidate_failures": 0,
+        "mass_issues": 0,
+        "constraints": 0
+      }
+    },
+    {
+      "case": "Industrial-Dry-fed-Paper_Case_6",
+      "calibration_strategy": "char_extent_search_0.999",
+      "gasifier_type": "Dry Powder",
+      "carbon_conversion": null,
+      "char_extent_mode": "correlation_v2",
+      "char_extent_used": 0.999,
+      "residual_carbon_mol": 2630.785196902696,
+      "ratio_oc_input": 1.05,
+      "ratio_oc_used": 1.05,
+      "effective_heat_loss_percent": 10.646674197329506,
+      "physical_heat_loss_percent": 1.5,
+      "model_correction_percent": 9.146674197329506,
+      "calibrated_ratio_oc": null,
+      "calibrated_heat_loss_percent": 10.646674197329506,
+      "expected": {
+        "TOUT_C": 1370.0,
+        "Y_CO": 61.7,
+        "Y_H2": 30.3
+      },
+      "predicted": {
+        "TOUT_C": 1370.0000014179182,
+        "Y_CO": 61.545781088100796,
+        "Y_H2": 26.613941093285153,
+        "Y_CO2": 11.087266234376399,
+        "Y_CH4": 0.008287488695622547
+      },
+      "errors": {
+        "T_error_C": 1.4179181562212761e-06,
+        "Y_CO_error": -0.154218911899207,
+        "Y_H2_error": -3.686058906714848
+      },
+      "diagnostics": {
+        "total_warnings": 0,
+        "mass_balance_issues": 0,
+        "constraint_violations": 0,
+        "details": {
+          "convergence_warnings": [],
+          "candidate_failures": [],
+          "mass_balance_errors": [],
+          "constraint_violations": []
+        }
+      },
+      "score": {
+        "temp_abs": 1.4179181562212761e-06,
+        "comp_mae": 1.9201389093070276,
+        "warnings": 0,
+        "candidate_failures": 0,
+        "mass_issues": 0,
+        "constraints": 0
+      }
+    }
+  ]
+}

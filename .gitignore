@@ -20,3 +20,4 @@ env/
 # Validation artifacts
 validation_results.json
 generated/validation/*.json
+!generated/validation/validation_results.json
