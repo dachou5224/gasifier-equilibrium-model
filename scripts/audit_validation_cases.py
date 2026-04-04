@@ -14,11 +14,15 @@ from gasifier.gasifier import GasifierModel
 try:
     from validation_profile import (
         build_profile_inputs,
+        build_calibration_config,
+        get_calibration_config,
         select_best_validation_candidate,
     )
 except ModuleNotFoundError:
     from scripts.validation_profile import (
         build_profile_inputs,
+        build_calibration_config,
+        get_calibration_config,
         select_best_validation_candidate,
     )
 
@@ -42,12 +46,33 @@ def score_case(errors, diagnostics):
     ]
     return {
         "temp_abs": abs(errors.get("T_error_C", 0.0)) if "T_error_C" in errors else None,
+        "carbon_conversion_abs_pct": abs(errors.get("carbon_conversion_pct_error", 0.0))
+        if "carbon_conversion_pct_error" in errors
+        else None,
         "comp_mae": sum(comp_terms) / len(comp_terms) if comp_terms else None,
         "warnings": diagnostics["total_warnings"],
         "candidate_failures": len(diagnostics["details"].get("candidate_failures", [])),
         "mass_issues": diagnostics["mass_balance_issues"],
         "constraints": diagnostics["constraint_violations"],
     }
+
+
+def classify_case_family(case_name):
+    if "Texaco_I-" in case_name:
+        return "texaco_i"
+    if "Texaco_W-" in case_name:
+        return "texaco_w"
+    if "Texaco_Exxon" in case_name:
+        return "texaco_exxon"
+    if case_name.startswith("Pilot-Slurry-fed-"):
+        return "pilot_cws"
+    if case_name.startswith("Pilot-Dry-fed-slurry"):
+        return "pilot_slurry_residue"
+    if case_name.startswith("Industrial-Slurry-fed-"):
+        return "industrial_cws"
+    if case_name.startswith("Industrial-Dry-fed-"):
+        return "industrial_dry"
+    return "other"
 
 
 def aggregate(records):
@@ -84,14 +109,28 @@ def aggregate(records):
     }
 
 
+def aggregate_by_family(records):
+    families = sorted({r["family"] for r in records})
+    result = {}
+    for family in families:
+        subset = [r for r in records if r["family"] == family]
+        result[family] = aggregate(subset)
+    return result
+
+
 def main():
     parser = argparse.ArgumentParser(description="Audit all 19 validation cases.")
     parser.add_argument("--profile", choices=["tuned-19cases"], default=None)
+    parser.add_argument("--mode", choices=["predictive", "calibrated"], default="calibrated")
     parser.add_argument("--solver-method", choices=["RGibbs", "Stoic"], default=None)
     parser.add_argument("--carbon-conversion", type=float, default=None)
     parser.add_argument("--delta-t-wgs", type=float, default=None)
     parser.add_argument("--delta-t-meth", type=float, default=None)
     parser.add_argument("--calibrate-heat-loss", action="store_true")
+    parser.add_argument("--disable-heat-loss-calibration", action="store_true")
+    parser.add_argument("--disable-oc-calibration", action="store_true")
+    parser.add_argument("--disable-char-extent-search", action="store_true")
+    parser.add_argument("--focus-family", default=None)
     parser.add_argument(
         "--cases-path",
         default=str(ROOT / "generated" / "validation_cases_from_kinetic.json"),
@@ -105,23 +144,40 @@ def main():
     cases = json.loads(Path(args.cases_path).read_text(encoding="utf-8"))
     Path(args.output).parent.mkdir(parents=True, exist_ok=True)
     GasifierModel.print_diagnostics = lambda self: None
-    calibrate_heat_loss = args.calibrate_heat_loss or args.profile == "tuned-19cases"
+    calibration_config = build_calibration_config(
+        args.mode,
+        allow_heat_loss_calibration=False if args.disable_heat_loss_calibration else None,
+        allow_oc_calibration=False if args.disable_oc_calibration else None,
+        allow_char_extent_search=False if args.disable_char_extent_search else None,
+    )
+    calibrate_heat_loss = calibration_config.allow_heat_loss_calibration and (
+        args.calibrate_heat_loss or args.profile == "tuned-19cases"
+    )
 
     records = []
     for name, case in cases.items():
+        family = classify_case_family(name)
+        if args.focus_family and family != args.focus_family:
+            continue
         inputs = build_inputs(case, args)
         expected = case["expected_output"]
         calibration_strategy, model, calibration, results, errors = select_best_validation_candidate(
-            inputs, expected, calibrate_heat_loss=calibrate_heat_loss
+            inputs,
+            expected,
+            calibrate_heat_loss=calibrate_heat_loss,
+            mode=args.mode,
+            calibration_config=calibration_config,
         )
         records.append(
             {
                 "case": name,
+                "family": family,
                 "calibration_strategy": calibration_strategy,
                 "gasifier_type": inputs.get("GasifierType", ""),
                 "carbon_conversion": inputs.get("CarbonConversion"),
                 "char_extent_mode": inputs.get("CharExtentMode"),
                 "char_extent_used": results.get("CharExtent"),
+                "reference_carbon_conversion_pct": case.get("reference_carbon_conversion_pct"),
                 "residual_carbon_mol": results.get("ResidualCarbonMol"),
                 "ratio_oc_input": case["Process Conditions"].get("Ratio_OC"),
                 "ratio_oc_used": model.inputs.get("Ratio_OC"),
@@ -133,6 +189,7 @@ def main():
                 "expected": expected,
                 "predicted": {
                     "TOUT_C": results["TOUT_C"],
+                    "carbon_conversion_pct": results["CharExtent"] * 100.0 if results.get("CharExtent") is not None else None,
                     "Y_CO": results["Y_CO_dry"],
                     "Y_H2": results["Y_H2_dry"],
                     "Y_CO2": results["Y_CO2_dry"],
@@ -146,6 +203,9 @@ def main():
 
     payload = {
         "config": {
+            "mode": args.mode,
+            "calibration_config": calibration_config.to_dict(),
+            "focus_family": args.focus_family,
             "profile": args.profile,
             "solver_method": args.solver_method,
             "carbon_conversion": args.carbon_conversion,
@@ -153,8 +213,10 @@ def main():
             "delta_t_meth": args.delta_t_meth,
             "char_extent_mode": "correlation_v2" if args.profile == "tuned-19cases" else None,
             "calibrate_heat_loss": calibrate_heat_loss,
+            "toolbox_enabled": calibration_config.mode == "calibrated",
         },
         "summary": aggregate(records),
+        "family_summary": aggregate_by_family(records),
         "records": records,
     }
     Path(args.output).write_text(json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8")

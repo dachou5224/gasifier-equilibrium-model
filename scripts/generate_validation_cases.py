@@ -22,8 +22,29 @@ CASE_TO_COAL_MAP = {
     "Texaco_Exxon": "ShenYou 1 (神优1)",
     "Texaco_I-1": "ShenYou 1 (神优1)",
     "Texaco_I-2": "ShenYou 1 (神优1)",
+    "Texaco_I-3": "ShenYou 1 (神优1)",
+    "Texaco_I-4A": "ShenYou 1 (神优1)",
+    "Texaco_I-4B": "ShenYou 1 (神优1)",
+    "Texaco_I-5A": "ShenYou 1 (神优1)",
+    "Texaco_I-5B": "ShenYou 1 (神优1)",
     "Texaco_I-5C": "ShenYou 1 (神优1)",
+    "Texaco_I-6": "ShenYou 1 (神优1)",
+    "Texaco_I-7A": "ShenYou 1 (神优1)",
+    "Texaco_I-7B": "ShenYou 1 (神优1)",
+    "Texaco_I-8A": "ShenYou 1 (神优1)",
+    "Texaco_I-8B": "ShenYou 1 (神优1)",
+    "Texaco_I-8C": "ShenYou 1 (神优1)",
+    "Texaco_I-9": "ShenYou 1 (神优1)",
     "Texaco_I-10": "ShenYou 1 (神优1)",
+    "Texaco_I-11": "ShenYou 1 (神优1)",
+    "Texaco_W-1": "ShenYou 1 (神优1)",
+    "Texaco_W-2": "ShenYou 1 (神优1)",
+    "Texaco_W-3A": "ShenYou 1 (神优1)",
+    "Texaco_W-3B": "ShenYou 1 (神优1)",
+    "Texaco_W-4": "ShenYou 1 (神优1)",
+    "Texaco_W-5": "ShenYou 1 (神优1)",
+    "Texaco_W-6": "ShenYou 1 (神优1)",
+    "Texaco_W-7": "ShenYou 1 (神优1)",
     "slurry western": "ShenYou 1 (神优1)",
     "slurry eastern": "ShenYou 2 (神优2)",
     "texaco exxon": "ShenYou 1 (神优1)",
@@ -33,11 +54,74 @@ CASE_TO_COAL_MAP = {
     "texaco i-10": "ShenYou 1 (神优1)",
 }
 
-
 def _dulong_hhv_j_kg(C, H, O, S):
     c, h, o, s = C / 100.0, H / 100.0, O / 100.0, S / 100.0
     mj = 33.5 * c + 144.0 * h - 18.0 * o + 10.0 * s
     return mj * 1_000.0
+
+
+ARCHIVE_COAL_DATABASE = {
+    "Paper_Base_Coal": {
+        "Cd": 77.56,
+        "Hd": 4.67,
+        "Od": 9.44,
+        "Nd": 0.82,
+        "Sd": 0.40,
+        "Ad": 7.11,
+        "Vd": 31.24,
+        "FCd": 61.41,
+        "Mt": 4.53,
+        "HHV_Input": 29200.0,
+    },
+    "H-coal_residue_Illinois_No6": {
+        "Cd": 74.05,
+        "Hd": 6.25,
+        "Od": 1.32,
+        "Nd": 0.71,
+        "Sd": 1.77,
+        "Ad": 15.53,
+        "Vd": 31.24,
+        "FCd": 61.41,
+        "Mt": 4.53,
+        "HHV_Input": 29800.0,
+    },
+    "H-coal_residue_Illinois_No6_run2": {
+        "Cd": 73.04,
+        "Hd": 5.82,
+        "Od": 1.70,
+        "Nd": 0.73,
+        "Sd": 1.87,
+        "Ad": 16.83,
+        "Vd": 30.0,
+        "FCd": 53.17,
+        "Mt": 0.0,
+        "HHV_Input": _dulong_hhv_j_kg(73.04, 5.82, 1.70, 1.87) / 1000.0,
+    },
+    "H-coal_residue_Wyodak": {
+        "Cd": 78.37,
+        "Hd": 5.79,
+        "Od": 3.70,
+        "Nd": 0.92,
+        "Sd": 0.07,
+        "Ad": 11.05,
+        "Vd": 30.0,
+        "FCd": 58.95,
+        "Mt": 0.0,
+        "HHV_Input": _dulong_hhv_j_kg(78.37, 5.79, 3.70, 0.07) / 1000.0,
+    },
+    "Exxon_DSP_vacuum_tower_bottoms": {
+        "Cd": 70.74,
+        "Hd": 4.67,
+        "Od": 3.95,
+        "Nd": 1.18,
+        "Sd": 2.74,
+        "Ad": 16.72,
+        "Vd": 30.0,
+        "FCd": 53.28,
+        "Mt": 0.0,
+        "HHV_Input": _dulong_hhv_j_kg(70.74, 4.67, 3.95, 2.74) / 1000.0,
+    },
+}
 
 
 def _coal_analysis_from_ultimate(coal_def):
@@ -68,7 +152,13 @@ def _pick_coal_entry(name, case):
     coal_input = case.get("coal", {})
     if coal_input:
         return _coal_analysis_from_ultimate(coal_input)
-    coal_key = case.get("coal_type") or CASE_TO_COAL_MAP.get(name)
+    coal_key = case.get("coal_type")
+    if name == "Paper_Case_6" and coal_key == "Paper_Base_Coal":
+        coal_key = CASE_TO_COAL_MAP.get(name)
+    else:
+        coal_key = coal_key or CASE_TO_COAL_MAP.get(name)
+    if coal_key and coal_key in ARCHIVE_COAL_DATABASE:
+        return dict(ARCHIVE_COAL_DATABASE[coal_key])
     if coal_key and coal_key in COAL_DATABASE:
         return {
             "Cd": COAL_DATABASE[coal_key]["Cd"],
@@ -96,6 +186,7 @@ def _ratio_from_keys(data, keys, default=0.0):
 def _expected_gas(expected):
     result = {}
     result["TOUT_C"] = expected.get("outlet_temperature_C")
+    result["carbon_conversion_pct"] = expected.get("carbon_conversion_pct")
     dry = expected.get("dry_product_gas_vol_pct")
     if dry:
         for comp in ("CO", "H2", "CO2", "CH4"):
@@ -167,11 +258,16 @@ def build_case(name, category, feed_type, case):
         "expected_output": expected,
         "expected_meta": expected_meta,
         "case_name": f"{category}-{feed_type}-{name}",
+        "feedstock_type_orig": case.get("feedstock_type_orig"),
+        "feedstock_type_normalized": case.get("feedstock_type_normalized"),
+        "reference_carbon_conversion_pct": case.get("expected_results", {}).get("carbon_conversion_pct"),
     }
 
 
 def main():
-    source = Path("/Users/liuzhen/AI-projects/gasifier-1d-kinetic/data/validation_cases_final.json")
+    local_source = root / "validation_cases_final.json"
+    legacy_source = Path("/Users/liuzhen/AI-projects/gasifier-1d-kinetic/data/validation_cases_final.json")
+    source = local_source if local_source.exists() else legacy_source
     data = json.loads(source.read_text())
 
     merged = {}

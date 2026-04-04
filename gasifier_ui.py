@@ -38,13 +38,19 @@ if scripts_path not in sys.path:
 
 from gasifier.gasifier import GasifierModel
 from gasifier.coal_props import COAL_DATABASE
+from gasifier.validation_case_bundle import load_validation_case_bundle
 from gasifier.quench_syngas import (
     DEFAULT_COOLING_WATER_MASS_FLOW_KG_H,
     DEFAULT_T_WATER_IN_CELSIUS,
     evaluate_quench_syngas,
     solve_wet_syngas_temperature_after_quench,
 )
-from validation_profile import TUNED_19CASES_PROFILE, build_profile_inputs, select_best_validation_candidate
+from validation_profile import (
+    TUNED_19CASES_PROFILE,
+    build_calibration_config,
+    build_profile_inputs,
+    select_best_validation_candidate,
+)
 
 
 PROJECT_ROOT = Path(current_dir)
@@ -58,7 +64,7 @@ VALIDATION_RESULT_PATHS = (
 def _load_generated_cases():
     if GENERATED_CASES_PATH.exists():
         return json.loads(GENERATED_CASES_PATH.read_text(encoding="utf-8"))
-    return {}
+    return load_validation_case_bundle()
 
 
 def _load_validation_snapshot():
@@ -70,6 +76,290 @@ def _load_validation_snapshot():
 
 VALIDATION_CASES = _load_generated_cases()
 VALIDATION_SNAPSHOT, VALIDATION_SNAPSHOT_PATH = _load_validation_snapshot()
+
+
+def _inject_ui_styles():
+    st.markdown(
+        """
+        <style>
+        :root {
+            --ink: #16212f;
+            --muted: #627086;
+            --line: rgba(22, 33, 47, 0.10);
+            --soft: #f5f1e8;
+            --paper: #fbfaf7;
+            --accent: #b4512d;
+            --accent-dark: #7f3419;
+            --teal: #176b6b;
+            --sand: #ebe0c7;
+        }
+
+        .stApp {
+            background:
+                radial-gradient(circle at top right, rgba(180, 81, 45, 0.10), transparent 28%),
+                radial-gradient(circle at top left, rgba(23, 107, 107, 0.10), transparent 24%),
+                linear-gradient(180deg, #f8f5ee 0%, #fcfbf8 36%, #f5f0e4 100%);
+        }
+
+        .block-container {
+            padding-top: 1.5rem;
+            padding-bottom: 2rem;
+        }
+
+        h1, h2, h3 {
+            color: var(--ink);
+            letter-spacing: -0.02em;
+        }
+
+        .hero-shell {
+            padding: 1.4rem 1.5rem 1.2rem;
+            border: 1px solid var(--line);
+            border-radius: 24px;
+            background: linear-gradient(140deg, rgba(255,255,255,0.85), rgba(250,245,235,0.96));
+            box-shadow: 0 18px 45px rgba(38, 44, 53, 0.08);
+            margin-bottom: 1rem;
+        }
+
+        .hero-kicker {
+            display: inline-block;
+            padding: 0.28rem 0.6rem;
+            border-radius: 999px;
+            background: rgba(23, 107, 107, 0.10);
+            color: var(--teal);
+            font-size: 0.78rem;
+            font-weight: 700;
+            letter-spacing: 0.04em;
+            text-transform: uppercase;
+        }
+
+        .hero-title {
+            margin: 0.65rem 0 0.4rem;
+            font-size: 2.15rem;
+            font-weight: 800;
+            color: var(--ink);
+        }
+
+        .hero-copy {
+            color: var(--muted);
+            font-size: 0.98rem;
+            line-height: 1.6;
+            margin: 0;
+        }
+
+        .mini-grid {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 0.8rem;
+            margin-top: 1rem;
+        }
+
+        .mini-card {
+            padding: 0.85rem 0.95rem;
+            border-radius: 18px;
+            border: 1px solid var(--line);
+            background: rgba(255,255,255,0.74);
+        }
+
+        .mini-label {
+            color: var(--muted);
+            font-size: 0.78rem;
+            margin-bottom: 0.18rem;
+        }
+
+        .mini-value {
+            color: var(--ink);
+            font-size: 1.05rem;
+            font-weight: 700;
+        }
+
+        .section-card {
+            padding: 1rem 1.05rem;
+            border-radius: 20px;
+            border: 1px solid var(--line);
+            background: rgba(255,255,255,0.76);
+            margin-bottom: 0.9rem;
+        }
+
+        .section-title {
+            font-size: 1rem;
+            font-weight: 800;
+            color: var(--ink);
+            margin-bottom: 0.25rem;
+        }
+
+        .section-copy {
+            color: var(--muted);
+            font-size: 0.9rem;
+            line-height: 1.55;
+            margin: 0;
+        }
+
+        .mode-panel {
+            padding: 1rem 1.05rem;
+            border-radius: 20px;
+            border: 1px solid var(--line);
+            margin-bottom: 0.9rem;
+            background: linear-gradient(145deg, rgba(255,255,255,0.88), rgba(247,240,226,0.85));
+        }
+
+        .mode-panel.predictive {
+            background: linear-gradient(145deg, rgba(255,255,255,0.90), rgba(224, 241, 241, 0.88));
+        }
+
+        .mode-badge {
+            display: inline-block;
+            padding: 0.24rem 0.52rem;
+            border-radius: 999px;
+            font-size: 0.76rem;
+            font-weight: 700;
+            margin-bottom: 0.45rem;
+            color: white;
+            background: var(--accent);
+        }
+
+        .mode-panel.predictive .mode-badge {
+            background: var(--teal);
+        }
+
+        .mode-title {
+            color: var(--ink);
+            font-size: 1.05rem;
+            font-weight: 800;
+            margin-bottom: 0.22rem;
+        }
+
+        .mode-copy {
+            color: var(--muted);
+            font-size: 0.9rem;
+            line-height: 1.55;
+            margin: 0;
+        }
+
+        .toolbox-chip-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.45rem;
+            margin-top: 0.7rem;
+        }
+
+        .toolbox-chip {
+            padding: 0.34rem 0.62rem;
+            border-radius: 999px;
+            background: rgba(22, 33, 47, 0.06);
+            color: var(--ink);
+            font-size: 0.8rem;
+            font-weight: 600;
+        }
+
+        .toolbox-chip.on {
+            background: rgba(180, 81, 45, 0.14);
+            color: var(--accent-dark);
+        }
+
+        .result-banner {
+            padding: 0.95rem 1rem;
+            border-radius: 20px;
+            border: 1px solid var(--line);
+            background: linear-gradient(135deg, rgba(255,255,255,0.88), rgba(235,224,199,0.7));
+            margin-bottom: 1rem;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def _render_page_hero():
+    snapshot_cases = "-"
+    snapshot_comp = "-"
+    snapshot_mode = "-"
+    if VALIDATION_SNAPSHOT:
+        summary = VALIDATION_SNAPSHOT.get("summary", {})
+        config = VALIDATION_SNAPSHOT.get("config", {})
+        snapshot_cases = summary.get("case_count", "-")
+        snapshot_comp = f"{summary.get('avg_comp_mae', 0.0):.3f}"
+        snapshot_mode = config.get("mode", "-")
+    st.markdown(
+        f"""
+        <div class="hero-shell">
+            <div class="hero-kicker">Constrained Equilibrium Workspace</div>
+            <div class="hero-title">Entrained-Flow Gasifier Model</div>
+            <p class="hero-copy">
+                把基础平衡求解、案例模板与 calibration toolbox 放进同一个工作台。
+                `Prediction` 用于新工况试算，`Calibration` 用于贴合已有 plant / paper 数据。
+            </p>
+            <div class="mini-grid">
+                <div class="mini-card">
+                    <div class="mini-label">Validation Cases</div>
+                    <div class="mini-value">{snapshot_cases}</div>
+                </div>
+                <div class="mini-card">
+                    <div class="mini-label">Current Avg Comp MAE</div>
+                    <div class="mini-value">{snapshot_comp}</div>
+                </div>
+                <div class="mini-card">
+                    <div class="mini-label">Snapshot Mode</div>
+                    <div class="mini-value">{snapshot_mode}</div>
+                </div>
+            </div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def _render_mode_panel(run_mode, allow_heat_loss, allow_oc, allow_char):
+    predictive = run_mode == "predictive"
+    title = "Prediction Core" if predictive else "Calibration Toolbox"
+    badge = "Predictive" if predictive else "Calibrated"
+    copy = (
+        "保持固定 closure 规则，不做逐案例反调。适合新工况、外推试算和看模型本体能力。"
+        if predictive
+        else "允许按你的目标启用 heat loss、O/C、char extent 等工具，用于案例贴合与参数诊断。"
+    )
+    chips = [
+        ("HeatLoss", allow_heat_loss and not predictive),
+        ("O/C", allow_oc and not predictive),
+        ("CharExtent", allow_char and not predictive),
+    ]
+    chip_html = "".join(
+        f'<span class="toolbox-chip {"on" if enabled else ""}">{label}</span>' for label, enabled in chips
+    )
+    st.markdown(
+        f"""
+        <div class="mode-panel {'predictive' if predictive else ''}">
+            <div class="mode-badge">{badge}</div>
+            <div class="mode-title">{title}</div>
+            <p class="mode-copy">{copy}</p>
+            <div class="toolbox-chip-row">{chip_html}</div>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
+
+
+def _render_result_banner(run_mode, calibration_config):
+    active_tools = []
+    if calibration_config.allow_heat_loss_calibration:
+        active_tools.append("HeatLoss")
+    if calibration_config.allow_oc_calibration:
+        active_tools.append("O/C")
+    if calibration_config.allow_char_extent_search:
+        active_tools.append("CharExtent")
+    tool_text = " / ".join(active_tools) if active_tools else "无"
+    mode_label = "Prediction" if run_mode == "predictive" else "Calibration"
+    st.markdown(
+        f"""
+        <div class="result-banner">
+            <div class="section-title">本次运行设置</div>
+            <p class="section-copy">
+                当前模式：<strong>{mode_label}</strong>；
+                启用工具：<strong>{tool_text}</strong>。
+            </p>
+        </div>
+        """,
+        unsafe_allow_html=True,
+    )
 
 # --- 1. 初始化 Session State (保持不变) ---
 def init_session_state():
@@ -101,6 +391,11 @@ def init_session_state():
         "advanced_mode": False,
         "use_tuned_profile": True,
         "use_auto_strategy": True,
+        "run_mode": "predictive",
+        "tool_allow_heat_loss_calibration": True,
+        "tool_allow_oc_calibration": True,
+        "tool_allow_char_extent_search": True,
+        "toolbox_preset": "Balanced Fit",
         "selected_validation_case": "保持当前 (Custom)",
         "last_case_name": None,
         # 激冷湿合成气计算器（独立模块，与 quench_syngas 默认一致）
@@ -201,13 +496,19 @@ def _render_validation_overview_tab():
     config = VALIDATION_SNAPSHOT.get("config", {})
     if config:
         with st.expander("当前验证设置", expanded=False):
+            calibration_config = config.get("calibration_config", {})
             st.dataframe(
                 pd.DataFrame(
                     [
                         {"项目": "验证方案", "说明": config.get("profile", "tuned-19cases")},
+                        {"项目": "运行模式", "说明": config.get("mode", "calibrated")},
                         {"项目": "求解器", "说明": config.get("solver_method") or "Stoic"},
                         {"项目": "热损校准", "说明": "开启" if config.get("calibrate_heat_loss") else "关闭"},
+                        {"项目": "Toolbox", "说明": "开启" if config.get("toolbox_enabled") else "关闭"},
                         {"项目": "Char extent", "说明": config.get("char_extent_mode") or "-"},
+                        {"项目": "HeatLoss 校准", "说明": "开启" if calibration_config.get("allow_heat_loss_calibration") else "关闭"},
+                        {"项目": "O/C 校准", "说明": "开启" if calibration_config.get("allow_oc_calibration") else "关闭"},
+                        {"项目": "Char 搜索", "说明": "开启" if calibration_config.get("allow_char_extent_search") else "关闭"},
                     ]
                 ),
                 hide_index=True,
@@ -220,15 +521,13 @@ def run():
     封装的主运行函数，供 chem_portal 调用
     """
     init_session_state()
+    _inject_ui_styles()
 
-    # 标题区域
-    st.title("🏭 气流床气化炉平衡模型")
-    st.markdown("面向 Chem Portal 子页面的 EFG 平衡模型，已对齐当前 `tuned-19cases` 验证主线。")
-    st.markdown("[📖 查看本项目 README](https://github.com/dachou5224/gasifier-equilibrium-model/blob/main/README.md)")
-    
+    _render_page_hero()
+    st.markdown("[查看 README](https://github.com/dachou5224/gasifier-equilibrium-model/blob/main/README.md)")
     st.divider()
 
-    tab_gas, tab_validation, tab_quench = st.tabs(["气化炉平衡", "19案验证总览", "激冷湿合成气"])
+    tab_gas, tab_validation, tab_quench = st.tabs(["Gasifier Workbench", "Validation Snapshot", "Quench Calculator"])
 
     with tab_gas:
         _render_gasifier_tab()
@@ -260,13 +559,23 @@ def _render_gasifier_tab():
     case_options = ["保持当前 (Custom)"] + list(VALIDATION_CASES.keys())
 
     with col_input:
-        st.info("🎯 已自动采用推荐设置。通常只需选择模板并调整 O/C、S/C、压力与热损。")
+        st.markdown(
+            """
+            <div class="section-card">
+                <div class="section-title">快速开始</div>
+                <p class="section-copy">
+                    推荐顺序是：先选 benchmark 模板，再确定是做预测还是做贴合，最后只改 O/C、S/C、压力和热损。
+                </p>
+            </div>
+            """,
+            unsafe_allow_html=True,
+        )
 
         with st.container(border=True):
-            st.markdown("#### 📂 步骤 1. 选择参考模板")
-            st.caption("优先使用 `generated/validation_cases_from_kinetic.json` 中的 19 个最新工况。")
+            st.markdown("#### 1. 参考模板")
+            st.caption(f"当前优先读取 `generated/validation_cases_from_kinetic.json` 中的 {len(VALIDATION_CASES)} 个 benchmark 工况。")
             case_name = st.selectbox(
-                "选择工况:",
+                "选择工况",
                 case_options,
                 index=case_options.index(st.session_state.selected_validation_case)
                 if st.session_state.selected_validation_case in case_options
@@ -285,7 +594,75 @@ def _render_gasifier_tab():
                 st.success(f"已应用模板：{case_name}")
                 st.rerun()
 
-        st.markdown("#### 🎛️ 步骤 2. 核心操纵杆")
+        st.markdown("#### 2. 运行模式")
+        mode_label = st.radio(
+            "运行模式",
+            ["Prediction", "Calibration"],
+            index=0 if st.session_state.run_mode == "predictive" else 1,
+            horizontal=True,
+            help="Prediction 禁用逐案例校准，适合新工况预测；Calibration 启用 toolbox 拟合已有案例。",
+        )
+        st.session_state.run_mode = "predictive" if mode_label == "Prediction" else "calibrated"
+
+        if st.session_state.run_mode == "predictive":
+            st.session_state.toolbox_preset = "Manual"
+            _render_mode_panel(
+                st.session_state.run_mode,
+                st.session_state.tool_allow_heat_loss_calibration,
+                st.session_state.tool_allow_oc_calibration,
+                st.session_state.tool_allow_char_extent_search,
+            )
+            st.info("当前为 `Prediction`。页面只保留模型本体与固定 closure，不做逐案例反调。")
+        else:
+            preset = st.radio(
+                "Toolbox Preset",
+                ["Temperature Match", "Balanced Fit", "Full Calibration", "Manual"],
+                index=["Temperature Match", "Balanced Fit", "Full Calibration", "Manual"].index(
+                    st.session_state.toolbox_preset
+                    if st.session_state.toolbox_preset in {"Temperature Match", "Balanced Fit", "Full Calibration", "Manual"}
+                    else "Balanced Fit"
+                ),
+                horizontal=True,
+                help="先用 preset 选策略，再按需手动微调具体工具。",
+            )
+            st.session_state.toolbox_preset = preset
+            if preset == "Temperature Match":
+                st.session_state.tool_allow_heat_loss_calibration = True
+                st.session_state.tool_allow_oc_calibration = False
+                st.session_state.tool_allow_char_extent_search = False
+            elif preset == "Balanced Fit":
+                st.session_state.tool_allow_heat_loss_calibration = False
+                st.session_state.tool_allow_oc_calibration = True
+                st.session_state.tool_allow_char_extent_search = True
+            elif preset == "Full Calibration":
+                st.session_state.tool_allow_heat_loss_calibration = True
+                st.session_state.tool_allow_oc_calibration = True
+                st.session_state.tool_allow_char_extent_search = True
+
+            st.caption(
+                "建议：只关心温度先用 `Temperature Match`；需要更贴合组分时再用 `Balanced Fit` 或 `Full Calibration`。"
+            )
+            c_tool_1, c_tool_2, c_tool_3 = st.columns(3)
+            st.session_state.tool_allow_heat_loss_calibration = c_tool_1.checkbox(
+                "HeatLoss",
+                value=st.session_state.tool_allow_heat_loss_calibration,
+            )
+            st.session_state.tool_allow_oc_calibration = c_tool_2.checkbox(
+                "O/C",
+                value=st.session_state.tool_allow_oc_calibration,
+            )
+            st.session_state.tool_allow_char_extent_search = c_tool_3.checkbox(
+                "CharExtent",
+                value=st.session_state.tool_allow_char_extent_search,
+            )
+            _render_mode_panel(
+                st.session_state.run_mode,
+                st.session_state.tool_allow_heat_loss_calibration,
+                st.session_state.tool_allow_oc_calibration,
+                st.session_state.tool_allow_char_extent_search,
+            )
+
+        st.markdown("#### 3. 核心操纵杆")
         st.session_state.GasifierType = st.radio(
             "气化炉水设置",
             ["Dry Powder", "CWS"],
@@ -312,6 +689,19 @@ def _render_gasifier_tab():
             format="%.2f",
             step=0.5,
             help="页面内部会自动使用推荐热损逻辑；这里显示的是最终使用的总热损。",
+        )
+
+        st.markdown(
+            """
+            <div class="section-card">
+                <div class="section-title">如何选工具</div>
+                <p class="section-copy">
+                    HeatLoss 更像能量闭合修正；O/C 与 CharExtent 更直接影响组分分配。
+                    如果你在做验证池外预测，先保持 `Prediction`；只有拿到 plant / paper 对照值时，再进入 `Calibration`。
+                </p>
+            </div>
+            """,
+            unsafe_allow_html=True,
         )
 
         st.markdown("---")
@@ -374,13 +764,21 @@ def _render_gasifier_tab():
             try:
                 input_data = _collect_input_data_from_state()
                 expected = None
+                calibration_config = build_calibration_config(
+                    st.session_state.run_mode,
+                    allow_heat_loss_calibration=st.session_state.tool_allow_heat_loss_calibration if st.session_state.run_mode == "calibrated" else False,
+                    allow_oc_calibration=st.session_state.tool_allow_oc_calibration if st.session_state.run_mode == "calibrated" else False,
+                    allow_char_extent_search=st.session_state.tool_allow_char_extent_search if st.session_state.run_mode == "calibrated" else False,
+                )
                 with st.spinner("Solving equilibrium..."):
                     if case_name != "保持当前 (Custom)" and st.session_state.use_auto_strategy:
                         expected = VALIDATION_CASES[case_name]["expected_output"]
                         _, model, _, res, _ = select_best_validation_candidate(
                             input_data,
                             expected,
-                            calibrate_heat_loss=True,
+                            calibrate_heat_loss=calibration_config.allow_heat_loss_calibration,
+                            mode=st.session_state.run_mode,
+                            calibration_config=calibration_config,
                         )
                     else:
                         model = GasifierModel(input_data)
@@ -391,6 +789,7 @@ def _render_gasifier_tab():
                 st.session_state.last_gasifier_P_MPa = float(model.inputs.get("P", st.session_state.P))
                 
                 st.success("计算完成")
+                _render_result_banner(st.session_state.run_mode, calibration_config)
 
                 st.subheader("1. 关键性能指标")
                 kpi1, kpi2, kpi3, kpi4 = st.columns(4)

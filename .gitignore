@@ -21,3 +21,11 @@ env/
 validation_results.json
 generated/validation/*.json
 !generated/validation/validation_results.json
+validation_cases_final.json
+generated/validation_cases_from_kinetic.json
+generated/equilibrium_scans/
+generated/simulation_comparison.json
+generated/tmp_*.json
+generated/validation_audit*.json
+*tmp*.md
+*agent*plan*.md

@@ -79,7 +79,7 @@ python3 scripts/scan_equilibrium_parameters.py
 - `tests/validation_results.json` 当前保留为已跟踪快照，便于直接比较
 - 根目录 `validation_results.json` 属于历史遗留产物，后续不建议继续作为主输出
 - `main_gui.py` 与 `path_utils.py` 暂未删除，是为了避免误伤历史工作流
-- `gasifier_ui.py` 当前默认读取 `generated/validation_cases_from_kinetic.json` 与 `generated/validation/validation_results.json`
+- `gasifier_ui.py` 当前本地优先读取 `generated/validation_cases_from_kinetic.json`；若部署环境无该文件，则回退到内置的 validation case bundle。验证快照仍默认读取 `generated/validation/validation_results.json`
 - `chem_portal` 通过 `pages/3_Gasifier_Model.py` 动态导入 `gasifier_ui.run()`
 - 本仓库已提供 `.github/workflows/deploy-to-vps.yml`，当 `main` 更新时会拉取 `gasifier-model` 并重建 `chem_portal`，从而自动刷新门户里的该子页面
 
